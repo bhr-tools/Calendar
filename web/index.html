@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Calendar">
+  <meta name="theme-color" content="#232136" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#faf4ed" media="(prefers-color-scheme: light)">
+  <title>Calendar</title>
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/style.css">
+  <script type="module" src="/js/app.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Calendars">
+      <div class="sidebar-header">
+        <span class="brand">Calendar</span>
+        <button type="button" class="icon-button" id="settings-menu" title="Settings"></button>
+      </div>
+      <div class="sidebar-section">
+        <span>Calendars</span>
+        <button type="button" class="icon-button" id="add-calendar" title="New calendar or subscription"></button>
+      </div>
+      <div class="calendar-list" id="calendar-list"></div>
+      <button type="button" class="connect-button" id="connect-button"></button>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <main class="main">
+      <header class="main-header">
+        <button type="button" class="icon-button menu-toggle" id="menu-toggle" title="Calendars" aria-label="Open the calendars"></button>
+        <h1 class="view-title" id="view-title"></h1>
+        <div class="header-actions">
+          <button type="button" class="button" id="today-button" title="Today (t)">Today</button>
+          <div class="nav-buttons">
+            <button type="button" class="icon-button" id="prev-button" title="Previous (h)"></button>
+            <button type="button" class="icon-button" id="next-button" title="Next (l)"></button>
+          </div>
+          <div class="segmented" id="view-switch" role="tablist">
+            <button type="button" data-view="day" title="Day (d)">Day</button>
+            <button type="button" data-view="week" title="Week (w)">Week</button>
+            <button type="button" data-view="month" title="Month (m)">Month</button>
+          </div>
+        </div>
+      </header>
+      <div class="view" id="view"></div>
+    </main>
+  </div>
+
+  <button type="button" class="fab" id="fab" title="Add event" aria-label="Add event"></button>
+
+  <footer class="statusbar">
+    <div class="status-left">
+      <span class="status-mode" id="status-mode">-- NORMAL --</span>
+      <span class="status-position" id="status-position"></span>
+    </div>
+    <div class="status-hints">
+      <span><kbd>h</kbd><kbd>l</kbd> period</span>
+      <span><kbd>j</kbd><kbd>k</kbd> events</span>
+      <span><kbd>a</kbd> add</span>
+      <span><kbd>q</kbd> quick add</span>
+      <span><kbd>y</kbd><kbd>p</kbd> copy / paste</span>
+      <span><kbd>/</kbd> search</span>
+      <button type="button" class="status-help" id="status-help"><kbd>?</kbd> help</button>
+    </div>
+  </footer>
+</body>
+</html>
