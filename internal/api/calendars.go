@@ -145,6 +145,58 @@ func (a *API) exportCalendar(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.WriteString(w, data)
 }
 
+// publishCalendar gives a calendar a new secret address (see Feed); the
+// previous address, if any, stops working.
+func (a *API) publishCalendar(w http.ResponseWriter, r *http.Request) {
+	c, err := a.store.SetFeedToken(r.PathValue("id"), true)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
+}
+
+func (a *API) unpublishCalendar(w http.ResponseWriter, r *http.Request) {
+	c, err := a.store.SetFeedToken(r.PathValue("id"), false)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
+}
+
+// FeedPrefix is where calendars are published: FeedPrefix + token + ".ics".
+const FeedPrefix = "/ics/"
+
+// Feed serves a published calendar as an iCalendar file, without logging
+// in: the unguessable token in the address is the credential. Apps that
+// subscribe to URLs but cannot log in (Google Calendar, Outlook) read it.
+func (a *API) Feed(w http.ResponseWriter, r *http.Request) {
+	token, ok := strings.CutSuffix(strings.TrimPrefix(r.URL.Path, FeedPrefix), ".ics")
+	if !ok || strings.Contains(token, "/") {
+		http.NotFound(w, r)
+		return
+	}
+	c, err := a.store.CalendarByFeedToken(token)
+	if err != nil {
+		if errors.Is(err, db.ErrNotFound) {
+			http.NotFound(w, r)
+		} else {
+			fail(w, r, err)
+		}
+		return
+	}
+	data, err := events.Export(a.store, c)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/calendar; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("X-Robots-Tag", "noindex")
+	_, _ = io.WriteString(w, data)
+}
+
 // importCalendar adds the events of an uploaded .ics file to a calendar.
 // Events already there (same UID) are replaced.
 func (a *API) importCalendar(w http.ResponseWriter, r *http.Request) {

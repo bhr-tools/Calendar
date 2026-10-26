@@ -779,35 +779,72 @@ class App {
   // Connect other apps (CalDAV)
   // -------------------------------------------------------------------------
 
+  /** A read-only field with a copy button. */
+  copyField(value) {
+    const input = h('input', { class: 'input', value, readOnly: true });
+    return h('div', { class: 'copy-field' }, input, h('button', {
+      type: 'button', class: 'icon-button', title: 'Copy',
+      onclick: async () => {
+        try {
+          await navigator.clipboard.writeText(value);
+          toast('Copied', { type: 'success' });
+        } catch {
+          input.select();
+        }
+      },
+    }, icon('copy')));
+  }
+
+  /**
+   * The secret address of a calendar: a read-only .ics feed for apps that
+   * subscribe to a URL but cannot log in to CalDAV (Google Calendar, Outlook).
+   */
+  shareCalendar(c) {
+    const body = h('div', { class: 'connect-steps' });
+    const change = async (publish) => {
+      const updated = await this.run(() => (publish ? api.calendars.publish(c.id) : api.calendars.unpublish(c.id)));
+      if (!updated) return;
+      c = updated;
+      render();
+      this.reload({ force: true });
+    };
+    const render = () => {
+      const intro = h('p', null, 'For apps that can subscribe to an address but cannot log in, such as Google Calendar or Outlook. They only read it, and refresh it on their own schedule (Google: every few hours). To edit from another app, use “Connect a calendar app” instead.');
+      if (!c.feed_token) {
+        body.replaceChildren(intro,
+          h('p', null, 'Anyone who knows the address can read this calendar.'),
+          h('div', null, h('button', { type: 'button', class: 'button primary', onclick: () => change(true) }, 'Create the address')));
+        return;
+      }
+      const address = `${location.origin}/ics/${c.feed_token}.ics`;
+      body.replaceChildren(intro,
+        h('div', { class: 'field' }, h('span', { class: 'field-label' }, `Secret address of “${c.name}”`), this.copyField(address)),
+        h('p', null, h('strong', null, 'Google Calendar: '), 'calendar.google.com › Other calendars › + › From URL, paste the address. (Importing the .ics file instead makes a one-time copy that never updates.)'),
+        h('p', null, 'Keep it private: anyone who knows it can read this calendar. If it leaks, make a new one: the old one stops working.'),
+        h('div', { class: 'share-actions' },
+          h('button', { type: 'button', class: 'button', onclick: () => change(true) }, 'New address'),
+          h('button', { type: 'button', class: 'button ghost danger-text', onclick: () => change(false) }, 'Stop sharing')));
+    };
+    render();
+    openModal({ title: 'Secret address', className: 'dialog', body, autofocus: false });
+  }
+
   async openConnect() {
     const info = await this.run(() => api.info());
     if (!info) return;
     const host = info.server.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const copyField = (value) => {
-      const input = h('input', { class: 'input', value, readOnly: true });
-      return h('div', { class: 'copy-field' }, input, h('button', {
-        type: 'button', class: 'icon-button', title: 'Copy',
-        onclick: async () => {
-          try {
-            await navigator.clipboard.writeText(value);
-            toast('Copied', { type: 'success' });
-          } catch {
-            input.select();
-          }
-        },
-      }, icon('copy')));
-    };
     openModal({
       title: 'Connect a calendar app',
       className: 'dialog',
       body: h('div', { class: 'connect-steps' },
         h('p', null, 'Your calendars are served over CalDAV: phone and desktop apps read and edit them live, and changes show up everywhere.'),
-        h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Server'), copyField(host)),
-        h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'CalDAV address'), copyField(info.caldav_url)),
+        h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Server'), this.copyField(host)),
+        h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'CalDAV address'), this.copyField(info.caldav_url)),
         h('p', null, h('strong', null, 'iPhone / iPad: '), 'Settings › Apps › Calendar › Calendar Accounts › Add Account › Other › Add CalDAV Account. Server: the address above, user name: anything, password: your Calendar password.'),
         h('p', null, h('strong', null, 'macOS: '), 'Calendar › Settings › Accounts › + › Other CalDAV Account, type “Manual”, same details.'),
         h('p', null, h('strong', null, 'Android: '), 'DAVx⁵ › Login with URL and user name, with the CalDAV address.'),
         h('p', null, h('strong', null, 'Thunderbird: '), 'New calendar › On the network, with the CalDAV address.'),
+        h('p', null, h('strong', null, 'Google Calendar, Outlook: '), 'they cannot log in to CalDAV. Give them a read-only secret address instead: calendar menu (⋯) › Secret address.'),
         info.no_auth ? h('p', { class: 'form-error' }, 'This instance has no password: set one before exposing it to the internet.') : null),
     });
   }

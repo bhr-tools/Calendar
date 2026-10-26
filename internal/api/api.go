@@ -61,6 +61,8 @@ func (a *API) Handler() http.Handler {
 	auth("POST /api/calendars/{id}/refresh", a.refreshCalendar)
 	auth("GET /api/calendars/{id}/export", a.exportCalendar)
 	auth("POST /api/calendars/{id}/import", a.importCalendar)
+	auth("POST /api/calendars/{id}/feed", a.publishCalendar)
+	auth("DELETE /api/calendars/{id}/feed", a.unpublishCalendar)
 
 	auth("GET /api/events", a.listEvents)
 	auth("POST /api/events", a.createEvent)

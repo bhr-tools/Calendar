@@ -13,6 +13,7 @@ export function renderSidebar(app, list) {
         { label: 'Edit', icon: 'edit', run: () => app.editCalendar(c) },
         c.source_url ? { label: 'Refresh now', icon: 'refresh', run: () => app.refreshCalendar(c) } : null,
         { label: 'Export (.ics)', icon: 'download', run: () => app.exportCalendar(c) },
+        { label: 'Secret address (Google…)', icon: 'link', run: () => app.shareCalendar(c) },
         c.source_url ? null : { label: 'Import (.ics)', icon: 'upload', run: () => app.importCalendar(c) },
         'separator',
         { label: c.source_url ? 'Unsubscribe' : 'Delete', icon: 'trash', danger: true, run: () => app.deleteCalendar(c) },

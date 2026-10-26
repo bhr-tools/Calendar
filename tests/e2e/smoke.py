@@ -81,6 +81,8 @@ def desktop(browser):
     drag(page, slot_point(page, 1, 10 * 60 + 5), slot_point(page, 1, 11 * 60 + 30))
     expect(page.locator(".draft-form")).to_be_visible()
     expect(page.locator(".draft-when")).to_contain_text("10:00 – 11:30")
+    # Drawing does not select the hour labels.
+    assert page.evaluate("getSelection().toString()") == "", "drag selected text"
     page.keyboard.type("Deep work")
     page.keyboard.press("Enter")
     expect(event(page, "Deep work")).to_have_count(1)
@@ -90,6 +92,20 @@ def desktop(browser):
     # Click opens the editor; rename and save with Ctrl+Enter.
     event(page, "Deep work").click()
     expect(page.locator(".modal.editor")).to_be_visible()
+    # The title is focused with the cursor at its end, not selected.
+    assert page.evaluate("[document.activeElement.selectionStart, document.activeElement.selectionEnd]") == [9, 9]
+    expect(page.locator(".editor-times")).to_have_class("editor-times one-day")
+    expect(page.locator(".editor-duration")).to_have_text("1h30")
+    # An end before the start means the next day: the end day appears.
+    page.locator(".time-field .field-input").nth(1).fill("8")
+    page.keyboard.press("Enter")
+    expect(page.locator(".editor-times")).to_have_class("editor-times days")
+    expect(page.locator(".date-field.end .field-input")).to_have_value("Wed 28 Oct")
+    page.locator(".date-field.end .field-input").fill("27 oct")
+    page.keyboard.press("Enter")
+    page.locator(".time-field .field-input").nth(1).fill("11h30")
+    page.keyboard.press("Tab")
+    expect(page.locator(".editor-times")).to_have_class("editor-times one-day")
     page.locator(".editor-title").fill("Deep work: calendar")
     page.locator(".editor-row .input[placeholder=Location]").fill("Home")
     page.keyboard.press("Control+Enter")
@@ -153,8 +169,20 @@ def desktop(browser):
     page.keyboard.press("t")
     page.keyboard.press("a")
     page.locator(".editor-title").fill("Standup")
-    page.locator(".editor-times input[type=time]").first.fill("09:00")
-    page.locator(".editor-times input[type=time]").nth(1).fill("09:15")
+    times = page.locator(".time-field .field-input")
+    times.first.fill("9h")
+    page.keyboard.press("Tab")
+    # The end kept the length (one hour) and its list shows durations.
+    expect(times.nth(1)).to_have_value("10:00")
+    expect(page.locator(".time-list:not([hidden]) .time-option.active")).to_contain_text("10:00")
+    expect(page.locator(".time-list:not([hidden]) .time-option.active")).to_contain_text("1h")
+    shot(page, "04-editor")
+    page.keyboard.press("ArrowUp")
+    page.keyboard.press("ArrowUp")
+    page.keyboard.press("ArrowUp")
+    expect(times.nth(1)).to_have_value("09:15")
+    page.keyboard.press("Enter")
+    expect(page.locator(".editor-duration")).to_have_text("15 min")
     page.locator(".modal.editor select").first.select_option(label="Every weekday (Mon – Fri)")
     page.get_by_role("button", name="Create").click()
     expect(event(page, "Standup")).to_have_count(5)
@@ -213,6 +241,18 @@ def desktop(browser):
     page.locator("#connect-button").click()
     expect(page.locator(".copy-field input").nth(1)).to_have_value(re.compile(r"^http://.+/dav/$"))
     shot(page, "09-connect")
+    page.keyboard.press("Escape")
+
+    # Secret address for Google Calendar: readable without logging in.
+    page.locator(".calendar-row", has_text="Personal").hover()
+    page.locator(".calendar-row", has_text="Personal").get_by_title("Calendar options").click()
+    page.get_by_text("Secret address").click()
+    page.get_by_role("button", name="Create the address").click()
+    address = page.locator(".copy-field input")
+    expect(address).to_have_value(re.compile(r"/ics/[\w-]{32}\.ics$"))
+    shot(page, "10-secret-address")
+    feed = browser.new_context().request.get(address.input_value())
+    assert feed.status == 200 and "SUMMARY:Deep work" in feed.text(), feed.text()[:300]
     page.keyboard.press("Escape")
     ctx.close()
 

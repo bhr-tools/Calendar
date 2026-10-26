@@ -5,7 +5,7 @@ A minimalist, self-hosted calendar built for **time blocking**, in the spirit of
 - **Time blocking:** draw a block on the grid to create it, drag it to move it, drag its bottom edge to resize it. **Hold Ctrl while dragging to copy it.** Everything snaps to 15 minutes.
 - **Live sync with other apps (CalDAV):** your phone's calendar app (Apple Calendar, DAVx⁵ on Android, Thunderbird…) reads and edits the same calendars, live. No Google account involved: the database lives on your server.
 - **Subscriptions:** add any iCalendar feed (a university timetable, holidays…). It is downloaded every 30 minutes and shown read-only, in the web app and in the connected apps.
-- **Export / import:** any calendar exports to a standard `.ics` file, and `.ics` files can be imported.
+- **Export / import:** any calendar exports to a standard `.ics` file, and `.ics` files can be imported. A calendar can also be published read-only at a secret address, for Google Calendar or Outlook.
 - **Full Vim navigation:** fully operable from the keyboard.
 - **Quick add:** one line, in English or French: `Sport demain 18h-19h30 @Gym`, `Standup every weekday 9:30`, `Holidays 24 dec`.
 - **Rosé Pine palette:** Moon (dark) and Dawn (light) themes, following the system setting.
@@ -46,6 +46,7 @@ Open **Connect a calendar app** in the sidebar for the exact addresses. In short
 - **macOS:** Calendar › Settings › Accounts › + › Other CalDAV Account (manual).
 - **Android:** DAVx⁵ › Login with URL and user name: `https://calendar.example.com/dav/`.
 - **Thunderbird:** New calendar › On the network: `https://calendar.example.com/dav/`.
+- **Google Calendar, Outlook:** they cannot log in to a CalDAV server. Give them a read-only **secret address** instead (calendar menu › Secret address), then in Google Calendar: Other calendars › + › From URL. They refresh it on their own schedule (Google: every few hours). Anyone who knows the address can read the calendar; making a new address revokes the old one.
 
 The server implements discovery (`/.well-known/caldav`), `calendar-multiget`, `calendar-query`, `sync-collection` and the `getctag` extension, so clients only download what changed. Events are stored exactly as clients send them: alarms and client-specific fields survive edits made in the web app.
 

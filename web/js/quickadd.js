@@ -220,3 +220,14 @@ export function parseQuickAdd(text, { today = todayISO(), defaultMinutes = 60 } 
   return { title: work.trim().replace(/\s+/g, ' '), allDay, start, end, rrule, location, tokens };
 }
 
+
+/** The day written in `text` ("28 oct", "demain", "friday", "2027-01-04"), or null. */
+export function parseDay(text, today = todayISO()) {
+  return findDate(` ${text} `, today)?.date ?? null;
+}
+
+/** Minutes after midnight of a typed time ("9", "9h", "930", "9:30", "2pm"), or null. */
+export function parseClock(text) {
+  const m = /^(\d{1,2})(?:[:h.]?(\d{2})?)?\s*(am|pm)?$/i.exec(String(text).trim());
+  return m ? clockMinutes(m[1], m[2], m[3]) : null;
+}

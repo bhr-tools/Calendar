@@ -1,7 +1,9 @@
 package db
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"strings"
 )
@@ -22,7 +24,10 @@ type Calendar struct {
 	SourceURL    string `json:"source_url,omitempty"`
 	RefreshedAt  string `json:"refreshed_at,omitempty"`
 	RefreshError string `json:"refresh_error,omitempty"`
-	SyncToken    int64  `json:"-"`
+	// FeedToken, when set, publishes the calendar read-only at a secret
+	// address.
+	FeedToken string `json:"feed_token,omitempty"`
+	SyncToken int64  `json:"-"`
 }
 
 // ReadOnly reports whether the calendar is a subscription.
@@ -50,14 +55,15 @@ func cleanName(name string) (string, error) {
 	return name, nil
 }
 
-const calendarColumns = `id, name, color, position, hidden, source_url, refreshed_at, refresh_error, sync_token`
+const calendarColumns = `id, name, color, position, hidden, source_url, refreshed_at, refresh_error, feed_token, sync_token`
 
 func scanCalendar(row interface{ Scan(...any) error }) (*Calendar, error) {
 	var c Calendar
-	var source, refreshed, refreshErr sql.NullString
-	if err := row.Scan(&c.ID, &c.Name, &c.Color, &c.Position, &c.Hidden, &source, &refreshed, &refreshErr, &c.SyncToken); err != nil {
+	var source, refreshed, refreshErr, feed sql.NullString
+	if err := row.Scan(&c.ID, &c.Name, &c.Color, &c.Position, &c.Hidden, &source, &refreshed, &refreshErr, &feed, &c.SyncToken); err != nil {
 		return nil, err
 	}
+	c.FeedToken = nullString(feed)
 	c.SourceURL = nullString(source)
 	c.RefreshedAt = nullString(refreshed)
 	c.RefreshError = nullString(refreshErr)
@@ -89,6 +95,39 @@ func (s *Store) GetCalendar(id string) (*Calendar, error) {
 		return nil, ErrNotFound
 	}
 	return c, err
+}
+
+// CalendarByFeedToken returns the calendar published at a secret address.
+func (s *Store) CalendarByFeedToken(token string) (*Calendar, error) {
+	if token == "" {
+		return nil, ErrNotFound
+	}
+	c, err := scanCalendar(s.db.QueryRow(`SELECT `+calendarColumns+` FROM calendars WHERE feed_token = ?`, token))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return c, err
+}
+
+// SetFeedToken publishes a calendar at a new secret address (replacing the
+// previous one), or unpublishes it when publish is false.
+func (s *Store) SetFeedToken(id string, publish bool) (*Calendar, error) {
+	var token any
+	if publish {
+		b := make([]byte, 24)
+		if _, err := rand.Read(b); err != nil {
+			return nil, err
+		}
+		token = base64.RawURLEncoding.EncodeToString(b)
+	}
+	res, err := s.db.Exec(`UPDATE calendars SET feed_token = ? WHERE id = ?`, token, id)
+	if err != nil {
+		return nil, err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return nil, ErrNotFound
+	}
+	return s.GetCalendar(id)
 }
 
 // CalendarInput holds the fields of a new calendar. An empty ID gets a random

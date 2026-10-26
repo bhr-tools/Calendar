@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -131,5 +132,59 @@ func TestReadOnlySubscription(t *testing.T) {
 	status := call(t, srv, "POST", "/api/events", map[string]any{"calendar_id": "missing", "title": "x", "start": "2026-10-26", "end": "2026-10-27", "all_day": true}, &e)
 	if status != 404 {
 		t.Fatalf("unknown calendar: %d %v", status, e)
+	}
+}
+
+func TestPublishedFeed(t *testing.T) {
+	store, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	c, _ := store.CreateCalendar(db.CalendarInput{Name: "Personal"})
+	paris, _ := time.LoadLocation("Europe/Paris")
+	svc := &events.Service{Store: store, Loc: paris}
+	a := New(store, svc, &feeds.Refresher{Store: store, Loc: paris}, true)
+	mux := http.NewServeMux()
+	mux.Handle("/api/", a.Handler())
+	mux.HandleFunc("GET "+FeedPrefix, a.Feed)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	call(t, srv, "POST", "/api/events", map[string]any{
+		"calendar_id": c.ID, "title": "Deep work", "start": "2026-10-26T09:00:00+01:00", "end": "2026-10-26T11:00:00+01:00",
+	}, nil)
+	get := func(path string) (int, string) {
+		res, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		body, _ := io.ReadAll(res.Body)
+		return res.StatusCode, string(body)
+	}
+	if status, _ := get(FeedPrefix + ".ics"); status != 404 {
+		t.Fatalf("empty token: %d", status)
+	}
+
+	var published db.Calendar
+	call(t, srv, "POST", "/api/calendars/"+c.ID+"/feed", nil, &published)
+	if len(published.FeedToken) < 32 {
+		t.Fatalf("token %q", published.FeedToken)
+	}
+	status, body := get(FeedPrefix + published.FeedToken + ".ics")
+	if status != 200 || !strings.Contains(body, "SUMMARY:Deep work") {
+		t.Fatalf("feed: %d %s", status, body)
+	}
+
+	// A new address replaces the old one; unpublishing removes it.
+	var again db.Calendar
+	call(t, srv, "POST", "/api/calendars/"+c.ID+"/feed", nil, &again)
+	if status, _ := get(FeedPrefix + published.FeedToken + ".ics"); status != 404 {
+		t.Fatalf("old address still served: %d", status)
+	}
+	call(t, srv, "DELETE", "/api/calendars/"+c.ID+"/feed", nil, nil)
+	if status, _ := get(FeedPrefix + again.FeedToken + ".ics"); status != 404 {
+		t.Fatalf("unpublished calendar still served: %d", status)
 	}
 }

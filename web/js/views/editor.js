@@ -3,7 +3,8 @@
 
 import { h, icon } from '../dom.js';
 import { openModal, openPopover } from '../ui/overlay.js';
-import { RRULE_DAYS, WEEKDAYS, addDays, dayLabel, hhmm, isoDate, parseISO, rruleLabel } from '../dates.js';
+import { MINUTE, RRULE_DAYS, WEEKDAYS, addDays, atMinutes, dayLabel, daysBetween, hhmm, isoDate, minutesOf, parseISO, rruleLabel } from '../dates.js';
+import { dateField, durationLabel, timeField } from '../ui/fields.js';
 
 /** Splits "FREQ=…;UNTIL=…" into the rule without UNTIL and the until day. */
 function splitUntil(rule) {
@@ -50,68 +51,101 @@ export function openEditor(app, e, { isNew = false } = {}) {
 
   const title = h('input', { class: 'editor-title', value: e.title || '', placeholder: 'Add title', maxLength: 500, disabled: readOnly });
   const allDay = h('input', { type: 'checkbox', checked: !!(e.all_day ?? e.allDay), disabled: readOnly });
-  const startDate = h('input', { type: 'date', class: 'input', value: startDay, disabled: readOnly });
-  const startTime = h('input', { type: 'time', class: 'input', value: hhmm(e.start), step: 300, disabled: readOnly });
-  // All-day ends are exclusive in data, inclusive on screen.
-  const endShown = (e.all_day ?? e.allDay) ? addDays(isoDate(e.end), -1) : isoDate(e.end);
-  const endDate = h('input', { type: 'date', class: 'input', value: endShown < startDay ? startDay : endShown, disabled: readOnly });
-  const endTime = h('input', { type: 'time', class: 'input', value: hhmm(e.end), step: 300, disabled: readOnly });
+
+  // The span being edited. All-day ends are exclusive in data, inclusive here.
+  const wasAllDay = allDay.checked;
+  const span = {
+    startDay,
+    startMin: wasAllDay ? 9 * 60 : minutesOf(e.start),
+    endDay: wasAllDay ? addDays(isoDate(e.end), -1) : isoDate(e.end),
+    endMin: wasAllDay ? 10 * 60 : minutesOf(e.end),
+  };
+  if (span.endDay < span.startDay) span.endDay = span.startDay;
+  const startAt = () => atMinutes(span.startDay, span.startMin);
+  const endAt = () => atMinutes(span.endDay, span.endMin);
+  const sameDay = () => span.endDay === span.startDay;
+
+  const startDate = dateField(span.startDay, {
+    disabled: readOnly,
+    onChange: (day) => {
+      // Moving the start keeps the length.
+      span.endDay = addDays(span.endDay, daysBetween(span.startDay, day));
+      span.startDay = day;
+      refresh();
+    },
+  });
+  const startTime = timeField(span.startMin, {
+    disabled: readOnly,
+    onChange: (m) => {
+      const end = new Date(endAt().getTime() + (m - span.startMin) * MINUTE);
+      span.startMin = m;
+      span.endDay = isoDate(end);
+      span.endMin = minutesOf(end);
+      refresh();
+    },
+  });
+  const endDate = dateField(span.endDay, {
+    disabled: readOnly,
+    onChange: (day) => {
+      span.endDay = day;
+      refresh();
+    },
+  });
+  const endTime = timeField(span.endMin, {
+    disabled: readOnly,
+    // On a one-day event the list counts from the start, with durations.
+    after: () => (allDay.checked || !sameDay() ? null : span.startMin),
+    onChange: (m) => {
+      if (m >= 1440) {
+        span.endDay = addDays(span.startDay, 1);
+        span.endMin = m - 1440;
+      } else {
+        span.endMin = m;
+        // Ending before it starts on the same day means the next day.
+        if (sameDay() && m <= span.startMin) span.endDay = addDays(span.startDay, 1);
+      }
+      refresh();
+    },
+  });
+  const duration = h('span', { class: 'editor-duration' });
 
   const { base, until } = splitUntil(e.rrule || '');
   const repeat = h('select', { class: 'input', disabled: readOnly },
     repeatOptions(startDay, base).map(([value, label]) => h('option', { value, selected: value === base }, label)));
-  const untilInput = h('input', { type: 'date', class: 'input', value: until, title: 'Repeat until (optional)', disabled: readOnly });
-  const untilRow = h('div', { class: 'editor-row' }, icon('chevronRight'), h('span', { class: 'field-label' }, 'Until'), untilInput);
+  const untilInput = dateField(until, { optional: true, placeholder: 'Forever', disabled: readOnly });
+  const untilRow = h('div', { class: 'editor-row' }, h('span', { class: 'icon' }), h('span', { class: 'field-label' }, 'Until'), untilInput.el);
 
   const calendar = readOnly ? null : calendarSelect(app, cal?.id);
   const location = h('input', { class: 'input', value: e.location || '', placeholder: 'Location', maxLength: 500, disabled: readOnly });
   const notes = h('textarea', { class: 'input', placeholder: 'Notes', disabled: readOnly });
   notes.value = e.notes || '';
 
-  const times = h('div', { class: 'editor-times' });
-  const layoutTimes = () => {
-    const ad = allDay.checked;
-    times.className = ['editor-times', ad && 'all-day'].filter(Boolean).join(' ');
-    times.replaceChildren(...(ad
-      ? [startDate, h('span', { class: 'dash' }, '–'), endDate]
-      : [startDate, startTime, endDate, endTime]));
+  // "Wed 28 Oct  08:15 – 10:00  1h45"; the end day only shows when it differs.
+  const times = h('div', { class: 'editor-times' },
+    startDate.el, startTime.el, h('span', { class: 'dash' }, '–'), endDate.el, endTime.el, duration);
+  endDate.el.classList.add('end');
+  const refresh = () => {
+    startDate.value = span.startDay;
+    startTime.value = span.startMin;
+    endDate.value = span.endDay;
+    endTime.value = span.endMin;
+    const minutes = Math.round((endAt() - startAt()) / MINUTE);
+    duration.textContent = minutes > 0 ? durationLabel(minutes) : '';
+    // CSS shows the fields each shape needs.
+    times.className = `editor-times ${allDay.checked ? 'all-day' : sameDay() ? 'one-day' : 'days'}`;
   };
-  layoutTimes();
-  allDay.addEventListener('change', layoutTimes);
+  refresh();
+  allDay.addEventListener('change', refresh);
   const syncUntil = () => { untilRow.hidden = !repeat.value; };
   syncUntil();
   repeat.addEventListener('change', syncUntil);
-
-  // Moving the start keeps the duration.
-  let lastStart = { date: startDate.value, time: startTime.value };
-  const keepDuration = () => {
-    const before = new Date(`${lastStart.date}T${lastStart.time || '00:00'}`);
-    const after = new Date(`${startDate.value}T${startTime.value || '00:00'}`);
-    const end = new Date(`${endDate.value}T${endTime.value || '00:00'}`);
-    if (!Number.isNaN(before) && !Number.isNaN(after) && !Number.isNaN(end)) {
-      const moved = new Date(end.getTime() + (after - before));
-      endDate.value = isoDate(moved);
-      if (!allDay.checked) endTime.value = hhmm(moved);
-    }
-    lastStart = { date: startDate.value, time: startTime.value };
-  };
-  startDate.addEventListener('change', keepDuration);
-  startTime.addEventListener('change', keepDuration);
 
   const error = h('div', { class: 'form-error', hidden: true });
 
   const collect = () => {
     const ad = allDay.checked;
-    let start;
-    let end;
-    if (ad) {
-      start = parseISO(startDate.value);
-      end = parseISO(addDays(endDate.value || startDate.value, 1));
-    } else {
-      start = new Date(`${startDate.value}T${startTime.value || '00:00'}`);
-      end = new Date(`${endDate.value || startDate.value}T${endTime.value || '00:00'}`);
-    }
-    if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new Error('Enter a valid start and end');
+    const start = ad ? parseISO(span.startDay) : startAt();
+    const end = ad ? parseISO(addDays(span.endDay, 1)) : endAt();
     if (end < start || (ad && end <= start)) throw new Error('The event ends before it starts');
     let rule = repeat.value;
     if (rule && untilInput.value) rule += `;UNTIL=${untilInput.value.replaceAll('-', '')}`;
@@ -178,8 +212,9 @@ export function openEditor(app, e, { isNew = false } = {}) {
     }
   });
   if (!readOnly) {
+    // Cursor at the end of the title, ready to type.
     title.focus();
-    title.select();
+    title.setSelectionRange(title.value.length, title.value.length);
   }
   return modal;
 }

@@ -1,8 +1,8 @@
 // Run with: node --test tests/js/*.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseQuickAdd } from '../../web/js/quickadd.js';
-import { hhmm, isoDate } from '../../web/js/dates.js';
+import { parseClock, parseDay, parseQuickAdd } from '../../web/js/quickadd.js';
+import { addDays, hhmm, isoDate } from '../../web/js/dates.js';
 
 const today = '2026-10-26'; // a Monday
 
@@ -41,4 +41,18 @@ test('all day and recurrence', () => {
 
 test('numbers in titles are left alone', () => {
   check('Read chapter 12', { title: 'Read chapter 12', day: today, time: 'all day' });
+});
+
+test('typed day and time of the editor fields', () => {
+  assert.equal(parseDay('Wed 28 Oct 2026', today), '2026-10-28');
+  assert.equal(parseDay('demain', today), addDays(today, 1));
+  assert.equal(parseDay('nothing', today), null);
+  assert.equal(parseClock('9'), 540);
+  assert.equal(parseClock('9h30'), 570);
+  assert.equal(parseClock('0930'), 570);
+  assert.equal(parseClock('815'), 495);
+  assert.equal(parseClock('14:45'), 885);
+  assert.equal(parseClock('2pm'), 840);
+  assert.equal(parseClock('25'), null);
+  assert.equal(parseClock('abc'), null);
 });

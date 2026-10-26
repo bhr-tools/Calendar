@@ -70,6 +70,8 @@ export const api = {
     remove: (calendarId) => del(`/api/calendars/${id(calendarId)}`),
     refresh: (calendarId) => post(`/api/calendars/${id(calendarId)}/refresh`),
     exportURL: (calendarId) => `/api/calendars/${id(calendarId)}/export`,
+    publish: (calendarId) => post(`/api/calendars/${id(calendarId)}/feed`),
+    unpublish: (calendarId) => del(`/api/calendars/${id(calendarId)}/feed`),
     importFile: (calendarId, file) => {
       const form = new FormData();
       form.append('file', file);

@@ -146,6 +146,10 @@ var migrations = []string{
 		token TEXT PRIMARY KEY,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`,
+	// 2: secret addresses of read-only iCalendar feeds (for apps that can
+	// subscribe to a URL but not log in, such as Google Calendar).
+	`ALTER TABLE calendars ADD COLUMN feed_token TEXT;
+	CREATE UNIQUE INDEX idx_calendars_feed ON calendars(feed_token);`,
 }
 
 func (s *Store) migrate() error {

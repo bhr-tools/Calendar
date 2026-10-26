@@ -316,4 +316,3 @@ func Export(store *db.Store, c *db.Calendar) (string, error) {
 	out.Children = append(timezones, events...)
 	return cal.Encode(out)
 }
-

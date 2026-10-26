@@ -119,7 +119,9 @@ func newHandler(store *db.Store, svc *events.Service, refresher *feeds.Refresher
 	app := noCache(http.FileServerFS(web.Files))
 
 	mux := http.NewServeMux()
-	mux.Handle("/api/", api.New(store, svc, refresher, noAuth).Handler())
+	a := api.New(store, svc, refresher, noAuth)
+	mux.Handle("/api/", a.Handler())
+	mux.HandleFunc("GET "+api.FeedPrefix, a.Feed)
 	mux.Handle(caldav.Prefix+"/", dav)
 	mux.Handle(caldav.Prefix, http.RedirectHandler(caldav.Prefix+"/", http.StatusMovedPermanently))
 	// RFC 6764 discovery.
