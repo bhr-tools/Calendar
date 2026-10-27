@@ -1,7 +1,7 @@
 // Event editor (a modal) and the small form shown when an event is drawn on
 // the grid. Both build the payload of the API and hand it back to the app.
 
-import { h, icon } from '../dom.js';
+import { h, icon, mapsUrl } from '../dom.js';
 import { openModal, openPopover } from '../ui/overlay.js';
 import { MINUTE, RRULE_DAYS, WEEKDAYS, addDays, atMinutes, dayLabel, daysBetween, hhmm, isoDate, minutesOf, parseISO, rruleLabel } from '../dates.js';
 import { dateField, durationLabel, timeField } from '../ui/fields.js';
@@ -117,6 +117,15 @@ export function openEditor(app, e, { isNew = false } = {}) {
 
   const calendar = readOnly ? null : calendarSelect(app, cal?.id);
   const location = h('input', { class: 'input', value: e.location || '', placeholder: 'Location', maxLength: 500, disabled: readOnly });
+  // The address, straight to Google Maps.
+  const maps = h('a', { class: 'icon-button', target: '_blank', rel: 'noopener noreferrer', title: 'Open in Google Maps' }, icon('link'));
+  const syncMaps = () => {
+    const place = location.value.trim();
+    maps.hidden = !place;
+    maps.href = place ? mapsUrl(place) : '';
+  };
+  syncMaps();
+  location.addEventListener('input', syncMaps);
   const notes = h('textarea', { class: 'input', placeholder: 'Notes', disabled: readOnly });
   notes.value = e.notes || '';
 
@@ -186,7 +195,7 @@ export function openEditor(app, e, { isNew = false } = {}) {
     row('calendar', readOnly
       ? h('span', { class: ['editor-calendar', `cal-${cal?.color}`] }, h('span', { class: 'calendar-dot' }), cal?.name, h('span', { class: 'editor-readonly' }, '· read-only'))
       : calendar),
-    readOnly && !e.location ? null : row('mapPin', location),
+    readOnly && !e.location ? null : row('mapPin', location, maps),
     readOnly
       ? (e.notes ? h('div', { class: 'editor-row top' }, icon('notes'), h('div', { class: 'editor-notes' }, e.notes)) : null)
       : h('div', { class: 'editor-row top' }, icon('notes'), notes),
