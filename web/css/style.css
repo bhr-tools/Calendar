@@ -863,7 +863,9 @@ select.input { cursor: pointer; }
   .calendar-row { min-height: 42px; font-size: 0.92rem; }
   .calendar-row .icon-button { opacity: 1; }
 
-  .main-header { gap: 6px; height: auto; min-height: 52px; padding: max(8px, env(safe-area-inset-top)) 10px 8px; }
+  /* Sticky with a background, iOS 26 extends its colour under the status
+     bar instead of blurring the top of the page. */
+  .main-header { position: sticky; top: 0; z-index: 10; background: var(--rp-base); gap: 6px; height: auto; min-height: 52px; padding: max(8px, env(safe-area-inset-top)) 10px 8px; }
   .menu-toggle { display: inline-flex; color: var(--rp-text); }
   .view-title { font-size: 1.05rem; }
   .header-actions { gap: 4px; }
