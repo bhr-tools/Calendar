@@ -737,6 +737,92 @@ select.input { cursor: pointer; }
 .picker-meta { flex-shrink: 0; color: var(--rp-muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
 .picker-empty { padding: 14px 12px; color: var(--rp-muted); font-size: 0.86rem; }
 
+.picker-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--rp-subtle);
+  font-size: 0.82rem;
+  text-align: left;
+}
+.picker-footer:hover { background: var(--rp-overlay); color: var(--rp-text); }
+
+/* Advanced search: a full-screen page */
+.modal-overlay:has(.search-page) { padding: 0; }
+.modal.search-page {
+  --inset: max(16px, calc((100% - 880px) / 2));
+  width: 100%;
+  height: 100dvh;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  background: var(--rp-base);
+}
+.modal.search-page .modal-body { flex: 1; gap: 0; padding: 0; overflow: hidden; }
+.search-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: max(10px, env(safe-area-inset-top)) var(--inset) 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--rp-surface);
+}
+.search-header .picker-search { flex: 1; min-width: 0; padding: 4px 6px; border: none; }
+.search-count { flex-shrink: 0; color: var(--rp-muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px var(--inset);
+  border-bottom: 1px solid var(--border);
+}
+.search-calendars { display: flex; flex-wrap: wrap; gap: 6px; }
+.search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--rp-subtle);
+  font-size: 0.78rem;
+}
+.search-chip .calendar-dot { width: 9px; height: 9px; }
+.search-chip.off { color: var(--rp-muted); text-decoration: line-through; }
+.search-chip.off .calendar-dot { background: transparent; }
+.search-results { flex: 1; min-height: 0; padding: 4px var(--inset) calc(24px + env(safe-area-inset-bottom)); overflow-y: auto; }
+.search-month {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 14px 4px 6px;
+  background: var(--rp-base);
+  color: var(--rp-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.search-now { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; color: var(--accent); font-size: 0.74rem; font-weight: 700; }
+.search-now::after { content: ""; flex: 1; height: 1px; background: var(--accent); }
+.search-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border-radius: 8px; text-align: left; }
+.search-row:hover { background: var(--rp-overlay); }
+.search-row.active { background: var(--rp-overlay); box-shadow: inset 3px 0 0 var(--accent); }
+.search-row.past { opacity: 0.5; }
+.search-row.past:hover, .search-row.past.active { opacity: 0.8; }
+.search-date { display: flex; flex-direction: column; align-items: center; width: 34px; flex-shrink: 0; color: var(--rp-muted); font-size: 0.68rem; line-height: 1.2; text-transform: uppercase; }
+.search-day { color: var(--rp-text); font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.search-row .calendar-dot { width: 10px; height: 10px; flex-shrink: 0; }
+.search-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.search-title, .search-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-title { font-weight: 500; }
+.search-meta { color: var(--rp-subtle); font-size: 0.78rem; }
+
 /* Quick add */
 .modal.quick-add { width: min(600px, 100%); align-self: flex-start; margin-top: 12dvh; }
 .modal.quick-add .modal-body { gap: 10px; padding: 14px 16px; }
@@ -935,6 +1021,9 @@ select.input { cursor: pointer; }
   }
   .modal.editor .modal-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   .help-grid { grid-template-columns: 1fr; }
+  .modal.editor .modal-footer .button-label { display: none; }
+  .search-filters { gap: 8px; }
+  .search-row { padding: 10px 6px; }
 }
 
 @keyframes sheet-up {

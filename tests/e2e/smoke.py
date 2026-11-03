@@ -233,6 +233,39 @@ def desktop(browser):
     expect(page.locator(".picker-item .picker-label", has_text=re.compile("^Sport$"))).to_have_count(1)
     page.keyboard.press("Enter")
     expect(page.locator(".chip.selected .chip-title", has_text=re.compile("^Sport$"))).to_have_count(1)
+
+    # Advanced search from the quick search: every occurrence, past ones greyed.
+    page.keyboard.press("/")
+    page.keyboard.type("standup")
+    page.keyboard.press("Tab")
+    expect(page.locator(".modal.search-page")).to_be_visible()
+    expect(page.locator(".search-row.past")).to_have_count(1)  # this morning's, at 9:00
+    expect(page.locator(".search-now")).to_be_visible()
+    assert page.locator(".search-row").count() > 200, page.locator(".search-row").count()
+    shot(page, "06b-advanced-search")
+    page.locator(".search-filters").get_by_role("button", name="Past").click()
+    expect(page.locator(".search-row")).to_have_count(1)
+    page.keyboard.press("Escape")
+    expect(page.locator(".modal.search-page")).to_have_count(0)
+
+    # From an event: the events with exactly the same title.
+    page.keyboard.press("w")
+    event(page, "Sport").click()
+    page.get_by_role("button", name="Same title").click()
+    expect(page.locator(".search-page .picker-input")).to_have_value("Sport")
+    expect(page.locator(".search-row")).to_have_count(1)
+    page.locator(".search-row").click()
+    expect(page.locator(".modal.search-page")).to_have_count(0)
+    expect(page.locator(".event.selected", has_text="Sport")).to_have_count(1)
+    page.wait_for_timeout(400)  # the jump to the event reloads, then selects
+
+    # The day view shows yesterday, today and tomorrow.
+    page.keyboard.press("t")
+    page.keyboard.press("d")
+    expect(page.locator(".day-col")).to_have_count(3)
+    expect(page.locator(".day-head .day-number")).to_have_text(["25", "26", "27"])
+    expect(page.locator(".day-head.today")).to_contain_text("26")
+    page.keyboard.press("m")
     page.keyboard.press("?")
     expect(page.locator(".modal.help")).to_be_visible()
     shot(page, "07-help")
@@ -271,7 +304,13 @@ def phone(browser):
     page.get_by_placeholder("Master password").fill(PASSWORD)
     page.get_by_role("button", name="Unlock").click()
     expect(page.locator(".grid")).to_be_visible()
+    expect(page.locator(".day-col")).to_have_count(3)
     shot(page, "10-phone-day")
+    column(page, 1).locator(".event", has_text="Standup").click()
+    page.get_by_title("All events with this title").click()
+    expect(page.locator(".search-row.past")).to_have_count(1)
+    shot(page, "10b-phone-search")
+    page.locator(".search-header").get_by_title("Close (Esc)").click()
     page.locator("#fab").click()
     expect(page.locator(".quick-input")).to_be_visible()
     shot(page, "11-phone-quick-add")

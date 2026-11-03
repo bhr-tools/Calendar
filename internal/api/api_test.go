@@ -188,3 +188,34 @@ func TestPublishedFeed(t *testing.T) {
 		t.Fatalf("unpublished calendar still served: %d", status)
 	}
 }
+
+func TestSearchAll(t *testing.T) {
+	srv, calID := setup(t)
+	for _, e := range []map[string]any{
+		{"title": "Climbing", "start": "2020-03-04T18:00:00+01:00", "end": "2020-03-04T20:00:00+01:00", "rrule": "FREQ=WEEKLY;COUNT=3"},
+		{"title": "Climbing gym", "start": time.Now().AddDate(0, 0, 3).Format(time.RFC3339), "end": time.Now().AddDate(0, 0, 3).Add(time.Hour).Format(time.RFC3339)},
+		{"title": "Dentist", "start": time.Now().AddDate(0, 1, 0).Format(time.RFC3339), "end": time.Now().AddDate(0, 1, 0).Add(time.Hour).Format(time.RFC3339)},
+	} {
+		e["calendar_id"], e["tz"] = calID, "Europe/Paris"
+		if status := call(t, srv, "POST", "/api/events", e, nil); status != 201 {
+			t.Fatalf("create %v: %d", e["title"], status)
+		}
+	}
+	var quick, all []eventJSON
+	call(t, srv, "GET", "/api/search?q=climbing", nil, &quick)
+	if len(quick) != 2 {
+		t.Fatalf("quick search: %d results", len(quick))
+	}
+	call(t, srv, "GET", "/api/search?q=climbing&all=1", nil, &all)
+	if len(all) != 4 {
+		t.Fatalf("full search: %d results, want every occurrence", len(all))
+	}
+	for i := 1; i < len(all); i++ {
+		if all[i].Start < all[i-1].Start {
+			t.Fatalf("not in date order: %s before %s", all[i-1].Start, all[i].Start)
+		}
+	}
+	if !strings.HasPrefix(all[0].Start, "2020-03-04") || all[3].Title != "Climbing gym" {
+		t.Fatalf("unexpected range: %s … %s", all[0].Start, all[3].Start)
+	}
+}

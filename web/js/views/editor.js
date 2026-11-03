@@ -202,11 +202,17 @@ export function openEditor(app, e, { isNew = false } = {}) {
     error,
   ];
 
+  // Every event of the same name, past ones included.
+  const sameTitle = isNew || !(e.title || '').trim() ? null : h('button', {
+    type: 'button', class: 'button ghost', title: 'All events with this title',
+    onclick: () => { modal.close(); app.findSameTitle(e); },
+  }, icon('search'), h('span', { class: 'button-label' }, 'Same title'));
   const footer = readOnly
-    ? [h('span', { class: 'spacer' }), h('button', { type: 'button', class: 'button', onclick: () => modal.close() }, 'Close')]
+    ? [sameTitle, h('span', { class: 'spacer' }), h('button', { type: 'button', class: 'button', onclick: () => modal.close() }, 'Close')]
     : [
-      isNew ? null : h('button', { type: 'button', class: 'button ghost danger-text', onclick: async () => { if (await app.deleteEvent(e)) modal.close(); } }, icon('trash'), 'Delete'),
-      isNew ? null : h('button', { type: 'button', class: 'button ghost', title: 'Duplicate (copy and paste)', onclick: async () => { modal.close(); await app.duplicate(e); } }, icon('copy'), 'Duplicate'),
+      isNew ? null : h('button', { type: 'button', class: 'button ghost danger-text', title: 'Delete', onclick: async () => { if (await app.deleteEvent(e)) modal.close(); } }, icon('trash'), h('span', { class: 'button-label' }, 'Delete')),
+      isNew ? null : h('button', { type: 'button', class: 'button ghost', title: 'Duplicate (copy and paste)', onclick: async () => { modal.close(); await app.duplicate(e); } }, icon('copy'), h('span', { class: 'button-label' }, 'Duplicate')),
+      sameTitle,
       h('span', { class: 'spacer' }),
       h('button', { type: 'button', class: 'button', onclick: () => modal.close() }, 'Cancel'),
       h('button', { type: 'button', class: 'button primary', onclick: save, title: 'Save (Ctrl+Enter)' }, isNew ? 'Create' : 'Save'),

@@ -7,6 +7,7 @@ A minimalist, self-hosted calendar built for **time blocking**, in the spirit of
 - **Subscriptions:** add any iCalendar feed (a university timetable, holidays…). It is downloaded every 30 minutes and shown read-only, in the web app and in the connected apps.
 - **Export / import:** any calendar exports to a standard `.ics` file, and `.ics` files can be imported. A calendar can also be published read-only at a secret address, for Google Calendar or Outlook.
 - **Full Vim navigation:** fully operable from the keyboard.
+- **Advanced search:** a full-screen page with every matching occurrence, past ones greyed out, filtered by period, calendar or exact title. An event's "Same title" button opens it on all the events of that name.
 - **Quick add:** one line, in English or French: `Sport demain 18h-19h30 @Gym`, `Standup every weekday 9:30`, `Holidays 24 dec`.
 - **Rosé Pine palette:** Moon (dark) and Dawn (light) themes, following the system setting.
 - **Zero bloat:** no AI, no invitations, no scheduling links, no notifications.
@@ -20,7 +21,7 @@ Press `?` in the app to show the cheatsheet.
 |---|---|
 | `h` / `l` (or `←` / `→`) | Previous / next day, week or month |
 | `t` | Today |
-| `d` / `w` / `m` | Day / week / month view |
+| `d` / `w` / `m` | Three days (yesterday, today, tomorrow) / week / month view |
 | `g` | Go to a date (`15 nov`, `friday`, `2027-01-04`) |
 | `j` / `k` (or `↓` / `↑`) | Next / previous event |
 | `Enter` or `e` | Open the selected event |
@@ -31,7 +32,7 @@ Press `?` in the app to show the cheatsheet.
 | `Shift+J` / `Shift+K` | Move 15 minutes later / earlier |
 | `Shift+L` / `Shift+H` | Move one day later / earlier |
 | `+` / `-` | Lengthen / shorten by 15 minutes |
-| `/` | Search titles, places and notes |
+| `/` | Search titles, places and notes; `Tab` opens the advanced search |
 | `Esc` | Close, leave a field, clear the selection |
 
 With the mouse: drag on empty space to create, drag an event to move it, drag its bottom edge to resize it, Ctrl+drag to copy it. On a phone, press and hold before dragging.

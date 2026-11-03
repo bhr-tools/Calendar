@@ -90,4 +90,6 @@ export const api = {
   },
 
   search: (query) => get(`/api/search?q=${id(query)}`),
+  /** Every occurrence matching query, past ones included, in date order. */
+  searchAll: (query) => get(`/api/search?q=${id(query)}&all=1`),
 };

@@ -10,6 +10,7 @@ import { closeAllModals, closePopover, confirmDialog, openMenu, openModal, toast
 import { renderGrid } from './views/grid.js';
 import { renderMonth } from './views/month.js';
 import { openDraftForm, openEditor } from './views/editor.js';
+import { openAdvancedSearch } from './views/search.js';
 import { renderSidebar } from './views/sidebar.js';
 import { initKeys } from './keys.js';
 import { parseQuickAdd } from './quickadd.js';
@@ -39,7 +40,7 @@ class App {
   constructor() {
     this.state = {
       auth: { no_auth: false, has_password: true, authenticated: false },
-      view: prefs.get('view', isMobile() ? 'day' : 'week'), // day | week | month
+      view: prefs.get('view', isMobile() ? 'day' : 'week'), // day (three days) | week | month
       anchor: todayISO(), // the focused day
       today: todayISO(),
       calendars: [],
@@ -94,10 +95,10 @@ class App {
   // Data
   // -------------------------------------------------------------------------
 
-  /** The days shown by the current view. */
+  /** The days shown by the current view: the day view shows the focused day between yesterday and tomorrow. */
   days() {
     const { view, anchor } = this.state;
-    if (view === 'day') return [anchor];
+    if (view === 'day') return [addDays(anchor, -1), anchor, addDays(anchor, 1)];
     const first = view === 'week' ? weekStart(anchor) : weekStart(`${anchor.slice(0, 8)}01`);
     const count = view === 'week' ? 7 : 42;
     return Array.from({ length: count }, (_, i) => addDays(first, i));
@@ -279,7 +280,7 @@ class App {
   select(key) {
     this.state.selected = key;
     const e = key && this.eventByKey(key);
-    if (e && this.days().includes(e.startDay)) this.state.anchor = e.startDay;
+    if (e && this.state.view !== 'day' && this.days().includes(e.startDay)) this.state.anchor = e.startDay;
     this.render();
     if (e) this.viewEl?.reveal?.(e);
   }
@@ -489,7 +490,7 @@ class App {
     }
     if (start.getTime() === e.start.getTime() && end.getTime() === e.end.getTime()) return;
     Object.assign(e, hydrate({ ...e, ...wireTimes(e.all_day, start, end) }), { key: e.key });
-    if (days && this.days().includes(e.startDay)) this.state.anchor = e.startDay;
+    if (days && this.state.view !== 'day' && this.days().includes(e.startDay)) this.state.anchor = e.startDay;
     this.render();
     this.viewEl?.reveal?.(e);
     const body = { ...this.payload(e), scope: e.recurring ? 'this' : 'all', recurrence_id: e.recurrence_id || '' };
@@ -621,12 +622,29 @@ class App {
       } else if (ev.key === 'Enter' && results[active]) {
         ev.preventDefault();
         go(results[active]);
+      } else if (ev.key === 'Tab' && !ev.shiftKey) {
+        ev.preventDefault();
+        advanced();
       }
     });
+    const advanced = () => {
+      modal.close();
+      openAdvancedSearch(this, { query: input.value.trim() });
+    };
     const modal = openModal({
       className: 'picker',
-      body: [h('div', { class: 'picker-search' }, icon('search'), input), list],
+      body: [
+        h('div', { class: 'picker-search' }, icon('search'), input),
+        list,
+        h('button', { type: 'button', class: 'picker-footer', onclick: advanced },
+          h('span', null, 'Advanced search: past events and filters'), h('kbd', null, 'Tab')),
+      ],
     });
+  }
+
+  /** Every event with the same title, past ones included. */
+  findSameTitle(e) {
+    openAdvancedSearch(this, { query: (e.title || '').trim(), exact: true });
   }
 
   /** g: jumps to a day typed in words ("15 nov", "next friday", "2027-01-04"). */
@@ -864,10 +882,11 @@ class App {
           h('h3', { class: 'field-label' }, 'Navigation'),
           row(['h', 'l'], 'Previous / next period'),
           row(['t'], 'Today'),
-          row(['d', 'w', 'm'], 'Day / week / month view'),
+          row(['d', 'w', 'm'], '3 days / week / month view'),
           row(['g'], 'Go to a date'),
           row(['j', 'k'], 'Next / previous event'),
           row(['/'], 'Search'),
+          row(['Tab'], 'Advanced search (in the search)'),
           row(['?'], 'This help'),
           row(['Esc'], 'Close, leave a field, clear selection'),
           h('h3', { class: 'field-label' }, 'Mouse'),

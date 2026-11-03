@@ -218,6 +218,50 @@ func (s *Service) Search(calendars []db.Calendar, query string, limit int) ([]Oc
 	return list, nil
 }
 
+// SearchAll returns every occurrence matching query, past and upcoming, in
+// date order. Recurring events are expanded up to a year ahead; past the
+// limit, the occurrences closest to now are kept.
+func (s *Service) SearchAll(calendars []db.Calendar, query string, limit int) ([]Occurrence, error) {
+	byID := map[string]db.Calendar{}
+	for _, c := range calendars {
+		byID[c.ID] = c
+	}
+	objs, err := s.Store.SearchObjects(query, 500)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now()
+	words := strings.Fields(strings.ToLower(query))
+	list := []Occurrence{}
+	for _, o := range objs {
+		c, ok := byID[o.CalendarID]
+		if !ok {
+			continue
+		}
+		parsed, err := cal.Parse(o.Data)
+		if err != nil {
+			continue
+		}
+		occs, err := cal.Expand(parsed, s.Loc, time.Unix(0, 0), now.AddDate(1, 0, 0))
+		if err != nil {
+			continue
+		}
+		for _, occ := range occs {
+			if matches(occ, words) {
+				list = append(list, Occurrence{Occurrence: occ, CalendarID: c.ID, Name: o.Name, ReadOnly: c.ReadOnly()})
+			}
+		}
+	}
+	if len(list) > limit {
+		sort.SliceStable(list, func(i, j int) bool {
+			return distance(list[i].Start, now) < distance(list[j].Start, now)
+		})
+		list = list[:limit]
+	}
+	sort.SliceStable(list, func(i, j int) bool { return list[i].Start.Before(list[j].Start) })
+	return list, nil
+}
+
 func distance(t, now time.Time) time.Duration {
 	d := t.Sub(now)
 	if d < 0 {

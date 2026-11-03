@@ -256,7 +256,14 @@ func (a *API) search(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
-	list, err := a.events.Search(calendars, r.URL.Query().Get("q"), 50)
+	q := r.URL.Query()
+	var list []events.Occurrence
+	if q.Get("all") == "1" {
+		// Advanced search: every occurrence, past ones included.
+		list, err = a.events.SearchAll(calendars, q.Get("q"), 2000)
+	} else {
+		list, err = a.events.Search(calendars, q.Get("q"), 50)
+	}
 	if err != nil {
 		fail(w, r, err)
 		return
