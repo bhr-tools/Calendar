@@ -580,7 +580,7 @@ class App {
     let timer = 0;
     const draw = () => {
       if (!results.length) {
-        list.replaceChildren(h('div', { class: 'picker-empty' }, input.value.trim() ? 'No event found' : 'Type to search titles, places and notes'));
+        list.replaceChildren(h('div', { class: 'picker-empty' }, input.value.trim() ? 'No upcoming event · Tab to search past ones too' : 'Type to search titles, places and notes'));
         return;
       }
       list.replaceChildren(...results.map((e, i) => {
@@ -607,7 +607,7 @@ class App {
       clearTimeout(timer);
       timer = setTimeout(async () => {
         const q = input.value.trim();
-        results = q ? ((await this.run(() => api.search(q))) || []).map(hydrate) : [];
+        results = q ? ((await this.run(() => api.search(q, this.now()))) || []).map(hydrate) : [];
         active = 0;
         draw();
       }, 150);

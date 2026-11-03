@@ -203,8 +203,8 @@ func TestSearchAll(t *testing.T) {
 	}
 	var quick, all []eventJSON
 	call(t, srv, "GET", "/api/search?q=climbing", nil, &quick)
-	if len(quick) != 2 {
-		t.Fatalf("quick search: %d results", len(quick))
+	if len(quick) != 1 || quick[0].Title != "Climbing gym" {
+		t.Fatalf("quick search: %v, want only the upcoming event", quick)
 	}
 	call(t, srv, "GET", "/api/search?q=climbing&all=1", nil, &all)
 	if len(all) != 4 {

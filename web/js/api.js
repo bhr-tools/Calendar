@@ -89,7 +89,7 @@ export const api = {
       del(`/api/events/${id(calendarId)}/${id(name)}?scope=${scope}&recurrence_id=${id(recurrenceId)}`),
   },
 
-  search: (query) => get(`/api/search?q=${id(query)}`),
+  search: (query, after) => get(`/api/search?q=${id(query)}&after=${id(after.toISOString())}`),
   /** Every occurrence matching query, past ones included, in date order. */
   searchAll: (query) => get(`/api/search?q=${id(query)}&all=1`),
 };

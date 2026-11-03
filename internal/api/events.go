@@ -262,7 +262,12 @@ func (a *API) search(w http.ResponseWriter, r *http.Request) {
 		// Advanced search: every occurrence, past ones included.
 		list, err = a.events.SearchAll(calendars, q.Get("q"), 2000)
 	} else {
-		list, err = a.events.Search(calendars, q.Get("q"), 50)
+		// Upcoming events only, as seen from the browser's clock when given.
+		now, perr := time.Parse(time.RFC3339, q.Get("after"))
+		if perr != nil {
+			now = time.Now()
+		}
+		list, err = a.events.Search(calendars, q.Get("q"), now, 50)
 	}
 	if err != nil {
 		fail(w, r, err)

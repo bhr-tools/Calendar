@@ -32,7 +32,7 @@ Press `?` in the app to show the cheatsheet.
 | `Shift+J` / `Shift+K` | Move 15 minutes later / earlier |
 | `Shift+L` / `Shift+H` | Move one day later / earlier |
 | `+` / `-` | Lengthen / shorten by 15 minutes |
-| `/` | Search titles, places and notes; `Tab` opens the advanced search |
+| `/` | Search upcoming events (titles, places, notes); `Tab` opens the advanced search, past included |
 | `Esc` | Close, leave a field, clear the selection |
 
 With the mouse: drag on empty space to create, drag an event to move it, drag its bottom edge to resize it, Ctrl+drag to copy it. On a phone, press and hold before dragging.

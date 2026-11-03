@@ -181,9 +181,10 @@ func (s *Service) Delete(calendarID, name string, recurrenceID time.Time, scope 
 	return err
 }
 
-// Search returns the occurrences matching query, closest to now first: the
-// next occurrence of each matching event, or its last one when it is over.
-func (s *Service) Search(calendars []db.Calendar, query string, limit int) ([]Occurrence, error) {
+// Search returns the next occurrence of each matching event that has not
+// ended at now, soonest first. Events that are over are left out: the
+// advanced search (SearchAll) has them.
+func (s *Service) Search(calendars []db.Calendar, query string, now time.Time, limit int) ([]Occurrence, error) {
 	byID := map[string]db.Calendar{}
 	for _, c := range calendars {
 		byID[c.ID] = c
@@ -192,7 +193,6 @@ func (s *Service) Search(calendars []db.Calendar, query string, limit int) ([]Oc
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now()
 	words := strings.Fields(strings.ToLower(query))
 	var list []Occurrence
 	for _, o := range objs {
@@ -204,14 +204,12 @@ func (s *Service) Search(calendars []db.Calendar, query string, limit int) ([]Oc
 		if err != nil {
 			continue
 		}
-		occ, ok := closest(parsed, s.Loc, now, words)
+		occ, ok := next(parsed, s.Loc, now, words)
 		if ok {
 			list = append(list, Occurrence{Occurrence: occ, CalendarID: c.ID, Name: o.Name, ReadOnly: c.ReadOnly()})
 		}
 	}
-	sort.SliceStable(list, func(i, j int) bool {
-		return distance(list[i].Start, now) < distance(list[j].Start, now)
-	})
+	sort.SliceStable(list, func(i, j int) bool { return list[i].Start.Before(list[j].Start) })
 	if len(list) > limit {
 		list = list[:limit]
 	}
@@ -281,35 +279,19 @@ func matches(o cal.Occurrence, words []string) bool {
 	return true
 }
 
-// closest finds the matching occurrence nearest to now, looking one year
-// around it.
-func closest(c *ical.Calendar, loc *time.Location, now time.Time, words []string) (cal.Occurrence, bool) {
-	occs, err := cal.Expand(c, loc, now.AddDate(-1, 0, 0), now.AddDate(1, 0, 0))
+// next finds the first matching occurrence that has not ended yet, looking
+// a year ahead. Past events are left to the advanced search.
+func next(c *ical.Calendar, loc *time.Location, now time.Time, words []string) (cal.Occurrence, bool) {
+	occs, err := cal.Expand(c, loc, now, now.AddDate(1, 0, 0))
 	if err != nil {
 		return cal.Occurrence{}, false
 	}
-	var best cal.Occurrence
-	found := false
 	for _, occ := range occs {
-		if !matches(occ, words) {
-			continue
-		}
-		if !found || distance(occ.Start, now) < distance(best.Start, now) {
-			best, found = occ, true
+		if matches(occ, words) {
+			return occ, true
 		}
 	}
-	if !found {
-		// Older events: show their first occurrence.
-		all, err := cal.Expand(c, loc, time.Unix(0, 0), now.AddDate(-1, 0, 0))
-		if err == nil {
-			for _, occ := range all {
-				if matches(occ, words) {
-					return occ, true
-				}
-			}
-		}
-	}
-	return best, found
+	return cal.Occurrence{}, false
 }
 
 // IsInvalid reports whether err is an InvalidError.
