@@ -473,6 +473,7 @@ select.input { cursor: pointer; }
   min-height: 0;
 }
 .month-cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -484,6 +485,9 @@ select.input { cursor: pointer; }
   border-bottom: 1px solid var(--border);
 }
 .month-cell:nth-child(7n) { border-right: none; }
+.month-cell .week-number { position: absolute; top: 5px; right: 6px; }
+.week-number { color: var(--rp-muted); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.03em; }
+.grid-head .week-number { display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; }
 .month-cell.outside { background: color-mix(in srgb, var(--rp-overlay) 30%, transparent); }
 .month-cell.outside .month-day { color: var(--rp-muted); }
 .month-cell.drop-target { background: color-mix(in srgb, var(--accent) 12%, transparent); }

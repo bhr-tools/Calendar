@@ -4,7 +4,7 @@
 
 import { h } from '../dom.js';
 import { follow } from '../drag.js';
-import { WEEKDAYS_SHORT, addDays, daysBetween, hhmm, isoDate, parseISO } from '../dates.js';
+import { WEEKDAYS_SHORT, addDays, daysBetween, hhmm, isoDate, isoWeek, parseISO } from '../dates.js';
 
 export function renderMonth(app, days, month) {
   const today = app.today();
@@ -23,6 +23,7 @@ export function renderMonth(app, days, month) {
       dataset: { day },
     },
     h('button', { type: 'button', class: 'month-day', title: 'Open this day', onclick: () => app.setView('day', day) }, d.getDate()),
+    d.getDay() === 1 ? h('span', { class: 'week-number', title: `Week ${isoWeek(day)}` }, `W${isoWeek(day)}`) : null,
     list.map((e) => {
       const cal = app.calendarOf(e.calendar_id);
       return h('div', {

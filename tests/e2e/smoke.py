@@ -74,6 +74,7 @@ def desktop(browser):
     expect(page.locator(".grid")).to_be_visible()
     expect(page.locator("#view-title")).to_contain_text("Oct – Nov 2026")
     expect(page.locator(".day-head.today")).to_contain_text("26")
+    expect(page.locator(".grid-head .week-number")).to_have_text("W44")
     shot(page, "01-week-empty")
 
     # Draw an event on Tuesday 10:00 – 11:30 and name it.
@@ -226,6 +227,7 @@ def desktop(browser):
     # Month view, search, help, light theme.
     page.keyboard.press("m")
     expect(page.locator(".month-grid")).to_be_visible()
+    expect(page.locator(".month-cell .week-number")).to_have_count(6)
     expect(page.locator(".chip-title", has_text=re.compile("^Sport$"))).to_have_count(1)
     shot(page, "06-month")
     page.keyboard.press("/")

@@ -62,6 +62,13 @@ export function weekStart(iso) {
   return addDays(iso, -((d.getDay() + 6) % 7));
 }
 
+/** ISO 8601 week number of iso (weeks start on Monday, week 1 holds 4 January). */
+export function isoWeek(iso) {
+  const thursday = parseISO(addDays(weekStart(iso), 3));
+  const jan1 = new Date(thursday.getFullYear(), 0, 1);
+  return Math.floor(Math.round((thursday - jan1) / DAY) / 7) + 1;
+}
+
 /** First day strictly after `iso` falling on `weekday` (0 = Sunday). */
 export function nextWeekday(iso, weekday) {
   const d = parseISO(iso);

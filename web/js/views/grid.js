@@ -4,7 +4,7 @@
 
 import { h } from '../dom.js';
 import { follow } from '../drag.js';
-import { MINUTE, WEEKDAYS_SHORT, addDays, atMinutes, daysBetween, hhmm, hourLabel, isoDate, minutesOf, parseISO } from '../dates.js';
+import { MINUTE, WEEKDAYS_SHORT, addDays, atMinutes, daysBetween, hhmm, hourLabel, isoDate, isoWeek, minutesOf, parseISO } from '../dates.js';
 
 export const SNAP = 15; // minutes
 
@@ -111,7 +111,7 @@ export function renderGrid(app, days) {
 
   // --- Head ---
   const head = h('div', { class: 'grid-head' },
-    h('div'),
+    h('div', { class: 'week-number', title: `Week ${isoWeek(app.state.anchor)}` }, `W${isoWeek(app.state.anchor)}`),
     days.map((day) => {
       const d = parseISO(day);
       return h('div', {
