@@ -193,8 +193,9 @@ func (a *API) createEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func scopeOf(s string) events.Scope {
-	if s == string(events.ScopeThis) {
-		return events.ScopeThis
+	switch events.Scope(s) {
+	case events.ScopeThis, events.ScopeFollowing:
+		return events.Scope(s)
 	}
 	return events.ScopeAll
 }
@@ -217,6 +218,10 @@ func (a *API) updateEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	scope := scopeOf(req.Scope)
+	if scope == events.ScopeFollowing {
+		// Only a deletion cuts a series; an edit applies to all of it.
+		scope = events.ScopeAll
+	}
 	o, err := a.events.Update(r.PathValue("calendar"), r.PathValue("name"), recurrenceID, scope, f, req.CalendarID, loc)
 	if err != nil {
 		fail(w, r, err)

@@ -134,6 +134,8 @@ type Scope string
 const (
 	ScopeAll  Scope = "all"
 	ScopeThis Scope = "this"
+	// ScopeFollowing is an occurrence and the ones after it (deletion only).
+	ScopeFollowing Scope = "following"
 )
 
 // Update edits an event. For a recurring event, recurrenceID names the
@@ -165,16 +167,25 @@ func (s *Service) Update(calendarID, name string, recurrenceID time.Time, scope 
 	return saved, nil
 }
 
-// Delete removes an event, or one occurrence of a recurring event.
+// Delete removes an event, one occurrence of a recurring event, or an
+// occurrence and the ones after it.
 func (s *Service) Delete(calendarID, name string, recurrenceID time.Time, scope Scope) error {
-	if scope != ScopeThis || recurrenceID.IsZero() {
+	if scope == ScopeAll || recurrenceID.IsZero() {
 		return s.Store.DeleteObject(calendarID, name, db.Condition{})
 	}
 	o, c, err := s.load(calendarID, name)
 	if err != nil {
 		return err
 	}
-	if !cal.DeleteOccurrence(c, recurrenceID, s.Loc) {
+	left := true
+	if scope == ScopeFollowing {
+		if left, err = cal.DeleteFollowing(c, recurrenceID, s.Loc); err != nil {
+			return invalid(err)
+		}
+	} else {
+		left = cal.DeleteOccurrence(c, recurrenceID, s.Loc)
+	}
+	if !left {
 		return s.Store.DeleteObject(calendarID, name, db.Condition{IfMatch: o.ETag})
 	}
 	_, err = s.save(o, c)

@@ -37,7 +37,7 @@ Press `?` in the app to show the cheatsheet.
 
 With the mouse: drag on empty space to create, drag an event to move it, drag its bottom edge to resize it, Ctrl+drag to copy it. On a phone, press and hold before dragging.
 
-A recurring event asks whether an edit applies to **this event** or **all events**. Keyboard moves (`Shift+J/K/H/L`) only move the selected occurrence.
+A recurring event asks whether an edit applies to **this event** or **all events**; a deletion can also take **this and the following** events (the series then ends the day before). Keyboard moves (`Shift+J/K/H/L`) only move the selected occurrence.
 
 ## Connecting other apps (CalDAV)
 

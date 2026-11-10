@@ -198,6 +198,14 @@ def desktop(browser):
     page.get_by_role("button", name="This event").click()
     expect(column(page, 4).locator(".event", has_text="Standup")).to_contain_text("11:00")
     expect(column(page, 3).locator(".event", has_text="Standup")).to_contain_text("09:00")
+    # Delete from Wednesday on: Monday and Tuesday stay, the moved Friday goes.
+    column(page, 2).locator(".event", has_text="Standup").click()
+    page.locator(".modal.editor").get_by_role("button", name="Delete").click()
+    expect(page.locator(".modal.dialog")).to_contain_text("following")
+    shot(page, "04b-delete-following")
+    page.get_by_role("button", name="This and following").click()
+    expect(event(page, "Standup")).to_have_count(2)
+    expect(column(page, 1).locator(".event", has_text="Standup")).to_have_count(1)
 
     # All-day event from the strip.
     page.locator(".allday-cell").nth(5).click()
@@ -243,7 +251,8 @@ def desktop(browser):
     expect(page.locator(".modal.search-page")).to_be_visible()
     expect(page.locator(".search-row.past")).to_have_count(1)  # this morning's, at 9:00
     expect(page.locator(".search-now")).to_be_visible()
-    assert page.locator(".search-row").count() > 200, page.locator(".search-row").count()
+    # Monday and Tuesday: the series was cut on Wednesday.
+    expect(page.locator(".search-row")).to_have_count(2)
     shot(page, "06b-advanced-search")
     page.locator(".search-filters").get_by_role("button", name="Past").click()
     expect(page.locator(".search-row")).to_have_count(1)

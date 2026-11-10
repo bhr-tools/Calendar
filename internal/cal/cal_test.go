@@ -132,6 +132,48 @@ func TestDeleteOccurrence(t *testing.T) {
 	}
 }
 
+func TestDeleteFollowing(t *testing.T) {
+	c, _ := Parse(mustParse(t, weekly))
+	// From the moved occurrence of the 9th: it and everything after go.
+	left, err := DeleteFollowing(c, at("2026-11-09 14:00"), paris)
+	if err != nil || !left {
+		t.Fatalf("left = %v, err = %v", left, err)
+	}
+	list, _ := Expand(c, paris, at("2026-10-01 00:00"), at("2027-03-01 00:00"))
+	if len(list) != 2 || list[0].Start.Day() != 19 || list[1].Start.Day() != 26 {
+		t.Fatalf("got %+v", list)
+	}
+	if rule := c.Children[0].Props.Get("RRULE").Value; rule != "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261109T125959Z" {
+		t.Errorf("rule = %q", rule)
+	}
+	if n := len(c.Children[0].Props.Values("EXDATE")); n != 1 {
+		t.Errorf("%d exceptions; the one of the 2nd, before the cut, stays", n)
+	}
+	if len(c.Children) != 1 {
+		t.Errorf("override after the cut kept: %d events", len(c.Children))
+	}
+	if _, err := Encode(c); err != nil {
+		t.Fatal(err)
+	}
+
+	// From the first occurrence: nothing is left.
+	c, _ = Parse(mustParse(t, weekly))
+	if left, err := DeleteFollowing(c, at("2026-10-19 14:00"), paris); err != nil || left {
+		t.Fatalf("from the first: left = %v, err = %v", left, err)
+	}
+
+	// All day, with a count: the count gives way to an end date.
+	rule := "FREQ=DAILY;COUNT=10"
+	c, _ = New("day-2", Fields{Title: "Camp", AllDay: true, Start: at("2026-11-01 00:00"), End: at("2026-11-02 00:00"), RRule: &rule}, paris)
+	if left, err := DeleteFollowing(c, at("2026-11-04 00:00"), paris); err != nil || !left {
+		t.Fatalf("all day: left = %v, err = %v", left, err)
+	}
+	list, _ = Expand(c, paris, at("2026-10-01 00:00"), at("2026-12-01 00:00"))
+	if len(list) != 3 || list[2].Start.Day() != 3 {
+		t.Fatalf("all day: got %+v", list)
+	}
+}
+
 func TestNewAllDayAndRemoveRule(t *testing.T) {
 	rule := "FREQ=DAILY;UNTIL=20261103"
 	c, err := New("day-1", Fields{Title: "Holidays", AllDay: true, Start: at("2026-11-01 00:00"), End: at("2026-11-02 00:00"), RRule: &rule}, paris)

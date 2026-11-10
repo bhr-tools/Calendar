@@ -323,8 +323,11 @@ class App {
     };
   }
 
-  /** Asks whether an edit of a recurring event applies to one occurrence or all. */
-  chooseScope(verb = 'Change') {
+  /**
+   * Asks whether an edit of a recurring event applies to one occurrence or
+   * all; a deletion can also take an occurrence and the ones after it.
+   */
+  chooseScope(verb = 'Change', { following = false } = {}) {
     return new Promise((resolve) => {
       let answer = null;
       const pick = (scope) => { answer = scope; modal.close(); };
@@ -332,10 +335,13 @@ class App {
       const modal = openModal({
         title: `${verb} a recurring event`,
         className: 'dialog',
-        body: h('p', { class: 'dialog-message' }, 'Apply to this event only, or to every event of the series?'),
+        body: h('p', { class: 'dialog-message' }, following
+          ? 'This event only, this one and the following ones, or every event of the series?'
+          : 'Apply to this event only, or to every event of the series?'),
         footer: [
           h('button', { type: 'button', class: 'button', onclick: () => modal.close() }, 'Cancel'),
           h('button', { type: 'button', class: 'button', onclick: () => pick('all') }, 'All events'),
+          following ? h('button', { type: 'button', class: 'button', onclick: () => pick('following') }, 'This and following') : null,
           thisButton,
         ],
         onClose: () => resolve(answer),
@@ -343,6 +349,7 @@ class App {
       modal.el.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter') { ev.preventDefault(); pick('this'); }
         if (ev.key === 'a') { ev.preventDefault(); pick('all'); }
+        if (following && ev.key === 'f') { ev.preventDefault(); pick('following'); }
       });
       requestAnimationFrame(() => thisButton.focus());
     });
@@ -417,7 +424,7 @@ class App {
     if (e.read_only) return false;
     let scope = 'all';
     if (e.recurring) {
-      scope = await this.chooseScope('Delete');
+      scope = await this.chooseScope('Delete', { following: true });
       if (!scope) return false;
     }
     const ok = await this.run(async () => {
@@ -425,11 +432,16 @@ class App {
       return true;
     });
     if (!ok) return false;
-    this.state.events = this.state.events.filter((x) => scope === 'this' ? x.key !== e.key : x.name !== e.name || x.calendar_id !== e.calendar_id);
+    const series = (x) => x.name === e.name && x.calendar_id === e.calendar_id;
+    this.state.events = this.state.events.filter((x) => {
+      if (scope === 'this') return x.key !== e.key;
+      if (scope === 'following') return !series(x) || x.start < e.start;
+      return !series(x);
+    });
     if (this.state.selected === e.key) this.state.selected = null;
     this.render();
     const undo = !e.recurring ? { label: 'Undo', run: () => this.createEvent({ ...e, rrule: '' }, { silent: true }) } : null;
-    toast(scope === 'this' ? 'Occurrence deleted' : 'Event deleted', { action: undo });
+    toast({ this: 'Occurrence deleted', following: 'This and the following events deleted' }[scope] || 'Event deleted', { action: undo });
     this.reload({ force: true });
     return true;
   }

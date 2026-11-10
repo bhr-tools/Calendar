@@ -358,3 +358,75 @@ func DeleteOccurrence(c *ical.Calendar, recurrenceID time.Time, loc *time.Locati
 	}
 	return len(events(c)) > 0
 }
+
+// DeleteFollowing ends a recurring event before one of its occurrences: that
+// occurrence and the following ones go, the earlier ones stay. It reports
+// whether the object still holds an event; if not, delete the object.
+func DeleteFollowing(c *ical.Calendar, recurrenceID time.Time, loc *time.Location) (bool, error) {
+	master, _ := split(c)
+	from := func(e *ical.Component) bool {
+		id, err := recurrenceIDOf(e, loc)
+		return err == nil && !id.Before(recurrenceID)
+	}
+	var kept []*ical.Component
+	for _, child := range c.Children {
+		if child.Name == ical.CompEvent && child.Props.Get(ical.PropRecurrenceID) != nil && from(child) {
+			continue
+		}
+		kept = append(kept, child)
+	}
+	c.Children = kept
+	if master == nil {
+		return len(events(c)) > 0, nil
+	}
+	ms, err := spanOf(master, loc)
+	if err != nil {
+		return false, err
+	}
+	if !recurrenceID.After(ms.start) {
+		// From the first occurrence: the whole series.
+		return false, nil
+	}
+
+	// The last occurrence kept ends the rule (UNTIL is inclusive), in the
+	// form RFC 5545 asks: a date for all-day events, local time for floating
+	// ones, UTC otherwise.
+	start := master.Props.Get(ical.PropDateTimeStart)
+	var until string
+	switch {
+	case ms.allDay:
+		until = recurrenceID.In(ms.loc).AddDate(0, 0, -1).Format(dateLayout)
+	case start.Params.Get(ical.PropTimezoneID) == "" && !strings.HasSuffix(start.Value, "Z"):
+		until = recurrenceID.Add(-time.Second).In(ms.loc).Format(dateTimeLayout)
+	default:
+		until = recurrenceID.Add(-time.Second).UTC().Format(dateTimeLayout + "Z")
+	}
+	if p := master.Props.Get(ical.PropRecurrenceRule); p != nil {
+		var parts []string
+		for _, part := range strings.Split(p.Value, ";") {
+			key, _, _ := strings.Cut(part, "=")
+			if k := strings.ToUpper(key); k == "COUNT" || k == "UNTIL" {
+				continue
+			}
+			parts = append(parts, part)
+		}
+		p.Value = strings.Join(append(parts, "UNTIL="+until), ";")
+		master.Props.Set(p)
+	}
+	// Added and removed dates after the cut have no use any more.
+	for _, name := range []string{ical.PropRecurrenceDates, ical.PropExceptionDates} {
+		var keep []ical.Prop
+		for _, p := range master.Props.Values(name) {
+			list, _, err := times(&p, ms.loc)
+			if err != nil || len(list) == 0 || list[0].Before(recurrenceID) {
+				keep = append(keep, p)
+			}
+		}
+		master.Props.Del(name)
+		for i := range keep {
+			master.Props.Add(&keep[i])
+		}
+	}
+	touch(master)
+	return true, nil
+}
