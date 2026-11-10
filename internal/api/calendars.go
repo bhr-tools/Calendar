@@ -29,7 +29,7 @@ type calendarRequest struct {
 	Color    *string `json:"color"`
 	Hidden   *bool   `json:"hidden"`
 	Position *int    `json:"position"`
-	URL      string  `json:"url"`
+	URL      *string `json:"url"`
 }
 
 func deref(s *string) string {
@@ -59,10 +59,8 @@ func (a *API) subscribe(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
-	link := strings.TrimSpace(req.URL)
-	u, err := url.Parse(link)
-	if err != nil || (u.Scheme != "https" && u.Scheme != "http" && u.Scheme != "webcal") || u.Host == "" {
-		writeError(w, http.StatusBadRequest, "Enter the http(s) or webcal address of an iCalendar feed")
+	link, u, ok := feedURL(w, deref(req.URL))
+	if !ok {
 		return
 	}
 	name := strings.TrimSpace(deref(req.Name))
@@ -84,17 +82,52 @@ func (a *API) subscribe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, c)
 }
 
+// feedURL checks the address of an iCalendar feed, answering 400 when it is
+// not one.
+func feedURL(w http.ResponseWriter, raw string) (string, *url.URL, bool) {
+	link := strings.TrimSpace(raw)
+	u, err := url.Parse(link)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http" && u.Scheme != "webcal") || u.Host == "" {
+		writeError(w, http.StatusBadRequest, "Enter the http(s) or webcal address of an iCalendar feed")
+		return "", nil, false
+	}
+	return link, u, true
+}
+
+// updateCalendar changes a calendar. A subscription moved to a new address is
+// downloaded again right away.
 func (a *API) updateCalendar(w http.ResponseWriter, r *http.Request) {
 	var req calendarRequest
 	if !decode(w, r, &req) {
 		return
 	}
-	c, err := a.store.UpdateCalendar(r.PathValue("id"), db.CalendarUpdate{
-		Name: req.Name, Color: req.Color, Hidden: req.Hidden, Position: req.Position,
-	})
+	id := r.PathValue("id")
+	before, err := a.store.GetCalendar(id)
 	if err != nil {
 		fail(w, r, err)
 		return
+	}
+	up := db.CalendarUpdate{Name: req.Name, Color: req.Color, Hidden: req.Hidden, Position: req.Position}
+	if req.URL != nil {
+		link, _, ok := feedURL(w, *req.URL)
+		if !ok {
+			return
+		}
+		up.SourceURL = &link
+	}
+	c, err := a.store.UpdateCalendar(id, up)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	if c.ReadOnly() && c.SourceURL != before.SourceURL {
+		ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+		defer cancel()
+		_ = a.feeds.Refresh(ctx, id) // the error is recorded on the calendar
+		if c, err = a.store.GetCalendar(id); err != nil {
+			fail(w, r, err)
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, c)
 }

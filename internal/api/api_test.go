@@ -219,3 +219,27 @@ func TestSearchAll(t *testing.T) {
 		t.Fatalf("unexpected range: %s … %s", all[0].Start, all[3].Start)
 	}
 }
+
+func TestEditSubscriptionAddress(t *testing.T) {
+	srv, local := setup(t)
+	var sub db.Calendar
+	if status := call(t, srv, "POST", "/api/subscriptions", map[string]any{"name": "School", "url": "http://127.0.0.1:1/old.ics"}, &sub); status != 201 {
+		t.Fatalf("subscribe: %d", status)
+	}
+	var got db.Calendar
+	if status := call(t, srv, "PATCH", "/api/calendars/"+sub.ID, map[string]any{"url": " webcal://127.0.0.1:1/new.ics "}, &got); status != 200 {
+		t.Fatalf("edit address: %d", status)
+	}
+	if got.SourceURL != "webcal://127.0.0.1:1/new.ics" || got.Name != "School" {
+		t.Fatalf("after edit: %+v", got)
+	}
+	if got.RefreshError == "" {
+		t.Fatalf("the new address was not downloaded: %+v", got)
+	}
+	if status := call(t, srv, "PATCH", "/api/calendars/"+sub.ID, map[string]any{"url": "not a feed"}, nil); status != 400 {
+		t.Fatalf("bad address: %d", status)
+	}
+	if status := call(t, srv, "PATCH", "/api/calendars/"+local, map[string]any{"url": "https://example.com/x.ics"}, nil); status != 400 {
+		t.Fatalf("address on a local calendar: %d", status)
+	}
+}

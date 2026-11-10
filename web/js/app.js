@@ -687,7 +687,7 @@ class App {
   calendarDialog({ title, calendar = null, subscription = false, submitLabel }) {
     return new Promise((resolve) => {
       const name = h('input', { class: 'input', value: calendar?.name || '', placeholder: subscription ? 'School timetable' : 'Personal', maxLength: 100 });
-      const url = subscription && !calendar ? h('input', { class: 'input', placeholder: 'https://… or webcal://…', autocomplete: 'off' }) : null;
+      const url = subscription ? h('input', { class: 'input', value: calendar?.source_url || '', placeholder: 'https://… or webcal://…', autocomplete: 'off' }) : null;
       let color = calendar?.color || COLORS[this.state.calendars.length % COLORS.length];
       const swatches = h('div', { class: 'swatches' });
       const drawSwatches = () => swatches.replaceChildren(...COLORS.map((c) => h('button', {
@@ -750,7 +750,10 @@ class App {
   async editCalendar(c) {
     const answer = await this.calendarDialog({ title: 'Edit calendar', calendar: c, subscription: !!c.source_url, submitLabel: 'Save' });
     if (!answer) return;
-    await this.run(() => api.calendars.update(c.id, { name: answer.name || c.name, color: answer.color }));
+    const fields = { name: answer.name || c.name, color: answer.color };
+    if (answer.url) fields.url = answer.url;
+    const updated = await this.run(() => api.calendars.update(c.id, fields));
+    if (updated?.refresh_error && answer.url !== c.source_url) toast(`Saved, but the download failed: ${updated.refresh_error}`, { type: 'error' });
     await this.reload({ force: true });
   }
 

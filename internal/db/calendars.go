@@ -206,14 +206,30 @@ type CalendarUpdate struct {
 	Color    *string
 	Hidden   *bool
 	Position *int
+	// SourceURL moves a subscription to another feed address. A local
+	// calendar has none and cannot get one.
+	SourceURL *string
 }
 
-// UpdateCalendar changes a calendar's name, color, visibility or position.
+// UpdateCalendar changes a calendar's name, color, visibility, position or,
+// for a subscription, its feed address.
 func (s *Store) UpdateCalendar(id string, up CalendarUpdate) (*Calendar, error) {
-	if _, err := s.GetCalendar(id); err != nil {
+	c, err := s.GetCalendar(id)
+	if err != nil {
 		return nil, err
 	}
-	err := s.tx(func(tx *sql.Tx) error {
+	err = s.tx(func(tx *sql.Tx) error {
+		if up.SourceURL != nil {
+			if !c.ReadOnly() {
+				return invalid("Only a subscription has a feed address")
+			}
+			if *up.SourceURL == "" {
+				return invalid("A subscription needs a feed address")
+			}
+			if _, err := tx.Exec(`UPDATE calendars SET source_url = ? WHERE id = ?`, *up.SourceURL, id); err != nil {
+				return err
+			}
+		}
 		if up.Name != nil {
 			name, err := cleanName(*up.Name)
 			if err != nil {
