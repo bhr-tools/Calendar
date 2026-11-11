@@ -853,6 +853,8 @@ select.input { cursor: pointer; }
 .connect-steps { display: flex; flex-direction: column; gap: 10px; color: var(--rp-subtle); font-size: 0.86rem; }
 .connect-steps ol { display: flex; flex-direction: column; gap: 6px; padding-left: 20px; }
 .connect-steps strong { color: var(--rp-text); }
+.app-row { display: flex; align-items: center; gap: 12px; }
+.app-info { flex: 1; min-width: 0; }
 .copy-field { display: flex; gap: 6px; }
 .share-actions { display: flex; gap: 8px; }
 .copy-field .input { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.8rem; }

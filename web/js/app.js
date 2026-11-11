@@ -89,6 +89,7 @@ class App {
     if (!status.no_auth && !status.has_password) return this.showSetup();
     if (!status.authenticated) return this.showLogin();
     await this.loadAll();
+    this.showConnect();
   }
 
   // -------------------------------------------------------------------------
@@ -1006,6 +1007,81 @@ class App {
   async afterLogin() {
     this.state.auth = { ...this.state.auth, has_password: true, authenticated: true };
     await this.loadAll();
+    this.showConnect();
+  }
+
+  // -------------------------------------------------------------------------
+  // Connected apps (an app sends the user to
+  // /?connect=<name>&redirect_uri=<url>&state=<s>; see internal/api/connect.go)
+  // -------------------------------------------------------------------------
+
+  showConnect() {
+    const q = new URLSearchParams(location.search);
+    const name = q.get('connect');
+    if (!name) return;
+    const redirect = q.get('redirect_uri') || '';
+    const state = q.get('state') || '';
+    history.replaceState(null, '', '/');
+    let host = '';
+    try {
+      const u = new URL(redirect);
+      if (u.protocol === 'https:' || u.protocol === 'http:') host = u.host;
+    } catch { /* no valid address */ }
+    const back = (params) => {
+      const u = new URL(redirect);
+      for (const [k, v] of Object.entries({ ...params, state })) u.searchParams.set(k, v);
+      location.href = u.toString();
+    };
+    const calendars = this.state.calendars || [];
+    const select = h('select', { class: 'input', attrs: { 'aria-label': 'Calendar' } },
+      calendars.map((c) => h('option', { value: c.id }, c.name)));
+    const error = h('div', { class: 'form-error', hidden: !!host && calendars.length > 0 },
+      !host ? 'This request has no valid address to come back to.' : 'There is no calendar to share yet.');
+    const allow = h('button', { type: 'button', class: 'button primary', disabled: !host || !calendars.length }, 'Allow');
+    const deny = h('button', { type: 'button', class: 'button' }, 'Deny');
+    const modal = openModal({
+      title: `Connect ${name}`,
+      className: 'dialog',
+      dismissible: false,
+      body: h('div', { class: 'auth-form' },
+        h('p', { class: 'dialog-message' }, `${name} (${host || 'unknown address'}) asks to read the events of one calendar. It sees nothing else and changes nothing.`),
+        error,
+        h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Calendar'), select)),
+      footer: [deny, allow],
+    });
+    allow.onclick = async () => {
+      allow.disabled = true;
+      try {
+        const { code } = await api.connect(name, redirect, select.value);
+        back({ code });
+      } catch (err) {
+        error.textContent = err.message;
+        error.hidden = false;
+        allow.disabled = false;
+      }
+    };
+    deny.onclick = () => {
+      if (host) back({ error: 'access_denied' });
+      else modal.close();
+    };
+  }
+
+  async connectedApps() {
+    const apps = await this.run(() => api.apps.list());
+    if (!apps) return;
+    let list = apps;
+    const body = h('div', { class: 'connect-steps' });
+    const render = () => body.replaceChildren(...(list.length ? list.map((a) => h('div', { class: 'app-row' },
+      h('div', { class: 'app-info' }, h('strong', null, a.name), h('span', { class: 'dialog-message' },
+        ` reads “${a.calendar_name}” · ${a.used_at ? 'last used ' + a.used_at.slice(0, 10) : 'connected ' + a.created_at.slice(0, 10)}`)),
+      h('button', { type: 'button', class: 'button ghost danger-text', onclick: async () => {
+        if ((await this.run(() => api.apps.remove(a.id))) === undefined) return;
+        list = list.filter((x) => x.id !== a.id);
+        toast(`${a.name} disconnected`);
+        render();
+      } }, 'Disconnect'))) : [h('p', { class: 'dialog-message' }, 'No app is connected. An app asks for access from its own settings.')]));
+    render();
+    openModal({ title: 'Connected apps', className: 'dialog', body, autofocus: false });
   }
 
   changePassword() {
@@ -1085,6 +1161,7 @@ class App {
     ], { title: 'Add' }));
     $('settings-menu').addEventListener('click', () => openMenu($('settings-menu'), [
       { label: 'Connect a calendar app', icon: 'phone', run: () => this.openConnect() },
+      { label: 'Connected apps', icon: 'link', run: () => this.connectedApps() },
       { label: 'Keyboard shortcuts', icon: 'search', hint: '?', run: () => this.openHelp() },
       ...(this.state.auth.no_auth ? [] : [
         'separator',

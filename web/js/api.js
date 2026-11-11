@@ -89,6 +89,13 @@ export const api = {
       del(`/api/events/${id(calendarId)}/${id(name)}?scope=${scope}&recurrence_id=${id(recurrenceId)}`),
   },
 
+  /** Connected apps: another app reads one calendar (see internal/api/connect.go). */
+  connect: (app, redirectUri, calendarId) => post('/api/connect', { app, redirect_uri: redirectUri, calendar_id: calendarId }),
+  apps: {
+    list: () => get('/api/apps'),
+    remove: (appId) => del(`/api/apps/${id(appId)}`),
+  },
+
   search: (query, after) => get(`/api/search?q=${id(query)}&after=${id(after.toISOString())}`),
   /** Every occurrence matching query, past ones included, in date order. */
   searchAll: (query) => get(`/api/search?q=${id(query)}&all=1`),
