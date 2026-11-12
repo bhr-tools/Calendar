@@ -140,6 +140,14 @@ def desktop(browser):
     drag(page, (box["x"] + box["width"] / 2, box["y"] + box["height"] - 2), end)
     expect(column(page, 3).locator(".event", has_text="Deep work")).to_contain_text("16:00 – 18:00")
 
+    # The right edge of a column stays free: a drag there creates an event over a busy slot.
+    col = column(page, 3).bounding_box()
+    edge = col["x"] + col["width"] - 4
+    drag(page, (edge, slot_point(page, 3, 16 * 60 + 30)[1] + 2), (edge, slot_point(page, 3, 17 * 60 + 30)[1] - 2))
+    expect(page.locator(".draft-when")).to_contain_text("16:30 – 17:30")
+    page.keyboard.press("Escape")
+    expect(page.locator(".draft-form")).to_have_count(0)
+
     # Keyboard: select, move, copy / paste, delete and undo.
     page.locator("body").click(position={"x": 5, "y": 5})
     page.keyboard.press("Escape")

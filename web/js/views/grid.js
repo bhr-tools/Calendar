@@ -158,8 +158,9 @@ export function renderGrid(app, days) {
       style: {
         top: `calc(${s.startMin / 60} * var(--hour) + 1px)`,
         height,
-        left: `calc(${(s.col / s.cols) * 100}% + 1px)`,
-        width: `calc(${100 / s.cols}% - 3px)`,
+        // The column's right edge stays free so a drag there creates an event, as in Google Calendar.
+        left: `calc(${s.col / s.cols} * (100% - var(--create-margin)) + 1px)`,
+        width: `calc((100% - var(--create-margin)) / ${s.cols} - 3px)`,
       },
       title: `${s.e.title || '(No title)'}\n${hhmm(s.e.start)} – ${hhmm(s.e.end)}${s.e.location ? `\n${s.e.location}` : ''}`,
     },

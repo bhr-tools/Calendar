@@ -271,6 +271,7 @@ select.input { cursor: pointer; }
   --gutter: 56px;
   user-select: none;
   --hour: 48px;
+  --create-margin: 12px;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -963,7 +964,7 @@ select.input { cursor: pointer; }
   .nav-buttons { display: none; }
   .segmented button { padding: 0 7px; }
 
-  .grid { --gutter: 40px; --hour: 52px; }
+  .grid { --gutter: 40px; --hour: 52px; --create-margin: 8px; }
   .day-head { flex-direction: column; align-items: center; gap: 0; }
   .event-location { display: none; }
   .month-cell .chip-time { display: none; }
