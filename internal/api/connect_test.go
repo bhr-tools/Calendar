@@ -16,11 +16,11 @@ func TestConnectedApp(t *testing.T) {
 	call(t, srv, "POST", "/api/events", map[string]any{"calendar_id": other["id"], "title": "Secret", "start": "2027-01-12", "end": "2027-01-13", "all_day": true}, nil)
 
 	back := "https://assistant.example.com/api/integrations/callback"
-	if s := call(t, srv, "POST", "/api/connect", map[string]any{"app": "Assistant", "redirect_uri": "javascript:x", "calendar_id": calID}, nil); s != 400 {
+	if s := call(t, srv, "POST", "/api/connect", map[string]any{"app": "Planner", "redirect_uri": "javascript:x", "calendar_id": calID}, nil); s != 400 {
 		t.Fatalf("bad redirect: %d", s)
 	}
 	var code struct{ Code string }
-	call(t, srv, "POST", "/api/connect", map[string]any{"app": "Assistant", "redirect_uri": back, "calendar_id": calID}, &code)
+	call(t, srv, "POST", "/api/connect", map[string]any{"app": "Planner", "redirect_uri": back, "calendar_id": calID}, &code)
 	var tok struct{ Token, ID, Name string }
 	if s := call(t, srv, "POST", "/api/connect/token", map[string]any{"code": code.Code, "redirect_uri": back}, &tok); s != 200 || tok.Token == "" || tok.Name != "Personal" {
 		t.Fatalf("token: %d %+v", s, tok)

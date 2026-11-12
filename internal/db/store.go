@@ -150,7 +150,7 @@ var migrations = []string{
 	// subscribe to a URL but not log in, such as Google Calendar).
 	`ALTER TABLE calendars ADD COLUMN feed_token TEXT;
 	CREATE UNIQUE INDEX idx_calendars_feed ON calendars(feed_token);`,
-	// 3: apps connected to one calendar (the Assistant…), by token.
+	// 3: apps connected to one calendar (another app of yours…), by token.
 	`CREATE TABLE app_tokens (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,

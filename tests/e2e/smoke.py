@@ -308,8 +308,8 @@ def desktop(browser):
     back = "http://assistant.test/api/integrations/callback"
     landed = []
     page.route("http://assistant.test/**", lambda route: (landed.append(route.request.url), route.fulfill(body="ok")))
-    page.goto(f"{BASE}/?connect=Assistant&redirect_uri={back}&state=s1")
-    dialog = page.locator(".dialog", has_text="Connect Assistant")
+    page.goto(f"{BASE}/?connect=Planner&redirect_uri={back}&state=s1")
+    dialog = page.locator(".dialog", has_text="Connect Planner")
     expect(dialog).to_contain_text("read the events of one calendar")
     shot(page, "10c-connect-app")
     dialog.get_by_role("button", name="Allow").click()
@@ -323,7 +323,7 @@ def desktop(browser):
     page.goto(BASE)
     page.locator("#settings-menu").click()
     page.get_by_text("Connected apps").click()
-    expect(page.locator(".app-row")).to_contain_text("Assistant")
+    expect(page.locator(".app-row")).to_contain_text("Planner")
     page.get_by_role("button", name="Disconnect").click()
     expect(page.locator(".dialog")).to_contain_text("No app is connected")
     page.keyboard.press("Escape")

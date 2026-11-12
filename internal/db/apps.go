@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 )
 
-// An app token lets another app (the Assistant…) read the events of one
+// An app token lets another app (another app of yours…) read the events of one
 // calendar the user chose; nothing else. The user grants it from the
 // connect page; it never expires and survives a password change, until the
 // user disconnects the app or deletes the calendar. Stored hashed, like

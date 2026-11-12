@@ -13,7 +13,7 @@ import (
 	"github.com/bhr-tools/calendar/internal/db"
 )
 
-// Connecting an app (the Assistant…) to Calendar, in the manner of OAuth,
+// Connecting an app (another app of yours…) to Calendar, in the manner of OAuth,
 // the same way as the user's other apps:
 //
 //  1. the app sends the user to /?connect=<name>&redirect_uri=<url>&state=<s>;
