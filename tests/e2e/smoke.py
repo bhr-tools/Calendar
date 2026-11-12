@@ -303,30 +303,6 @@ def desktop(browser):
     assert feed.status == 200 and "SUMMARY:Deep work" in feed.text(), feed.text()[:300]
     page.keyboard.press("Escape")
 
-    # Another app asks to read one calendar: the user chooses it, the app
-    # gets a code back, then lists it under Connected apps.
-    back = "http://assistant.test/api/integrations/callback"
-    landed = []
-    page.route("http://assistant.test/**", lambda route: (landed.append(route.request.url), route.fulfill(body="ok")))
-    page.goto(f"{BASE}/?connect=Planner&redirect_uri={back}&state=s1")
-    dialog = page.locator(".dialog", has_text="Connect Planner")
-    expect(dialog).to_contain_text("read the events of one calendar")
-    shot(page, "10c-connect-app")
-    dialog.get_by_role("button", name="Allow").click()
-    page.wait_for_url(re.compile(r"^http://assistant\.test/"))
-    assert landed and "code=" in landed[0] and "state=s1" in landed[0], landed
-    code = re.search(r"code=(\w+)", landed[0]).group(1)
-    tok = page.request.post(f"{BASE}/api/connect/token", data={"code": code, "redirect_uri": back})
-    assert tok.ok and tok.json()["name"] == "Personal", tok.text()
-    events = page.request.get(f"{BASE}/api/app/events?from=2026-10-01&to=2026-12-01", headers={"Authorization": "Bearer " + tok.json()["token"]})
-    assert events.ok and "Deep work" in events.text(), events.text()[:300]
-    page.goto(BASE)
-    page.locator("#settings-menu").click()
-    page.get_by_text("Connected apps").click()
-    expect(page.locator(".app-row")).to_contain_text("Planner")
-    page.get_by_role("button", name="Disconnect").click()
-    expect(page.locator(".dialog")).to_contain_text("No app is connected")
-    page.keyboard.press("Escape")
     ctx.close()
 
 

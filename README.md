@@ -53,10 +53,6 @@ The server implements discovery (`/.well-known/caldav`), `calendar-multiget`, `c
 
 Serve it over HTTPS (behind Caddy, for instance): CalDAV clients send the password with every request.
 
-## Connected apps
-
-Another app of yours (such as a planning assistant) can be given access to **one calendar**: it reads its events, nothing else, and changes nothing. The app sends you to `/?connect=<name>&redirect_uri=<url>&state=<s>`; Calendar asks which calendar it may read, then sends you back with a one-time code that the app's server trades for a token (`POST /api/connect/token`). With that token (`Authorization: Bearer …`), `GET /api/app/info` says what it opens (`{"app":"Calendar","scope":"calendar","id":…,"name":…}`, the same answer in each bhr-tools app) and `GET /api/app/events?from=YYYY-MM-DD&to=YYYY-MM-DD` lists the occurrences (from today, for a year, by default). Disconnect an app from Settings › Connected apps, or by deleting its calendar.
-
 ## Installation (NixOS)
 
 ```nix

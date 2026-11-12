@@ -150,7 +150,7 @@ var migrations = []string{
 	// subscribe to a URL but not log in, such as Google Calendar).
 	`ALTER TABLE calendars ADD COLUMN feed_token TEXT;
 	CREATE UNIQUE INDEX idx_calendars_feed ON calendars(feed_token);`,
-	// 3: apps connected to one calendar (another app of yours…), by token.
+	// 3: apps connected to one calendar, by token (dropped by 4).
 	`CREATE TABLE app_tokens (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
@@ -159,6 +159,9 @@ var migrations = []string{
 		created_at TEXT NOT NULL,
 		used_at TEXT
 	);`,
+	// 4: connecting another app to a calendar is gone: phone and desktop
+	// apps use CalDAV, read-only ones the secret address.
+	`DROP TABLE app_tokens;`,
 }
 
 func (s *Store) migrate() error {
